@@ -1,332 +1,309 @@
-# SETUP DESDE CERO — Sistema RAG NoSQL | Plataforma Musical Spotify-like
-# Ejecutar en orden. No hay nada clonado, partimos de una carpeta vacía.
+# 🎵 Spotify RAG — Sistema Musical Inteligente con MongoDB
+> Plataforma de streaming musical con búsqueda semántica y pipeline RAG.
+> Stack: Next.js 14 · Node.js/Express · MongoDB Atlas · Python (ingesta única) · Groq
 
-================================================================================
-## 0. PREREQUISITOS (instalar antes de comenzar)
-================================================================================
+---
 
-  Node.js >= 20.x         https://nodejs.org
-  Python >= 3.10          https://python.org
-  Git                     https://git-scm.com
-  Cuenta MongoDB Atlas    https://cloud.mongodb.com  (cluster M0 gratuito)
-  Cuenta Groq             https://console.groq.com   (API key gratuita)
-  Cuenta Vercel           https://vercel.com         (deploy frontend gratis)
+## ⚡ Inicio Rápido para Colaboradores
 
-  # Verificar versiones instaladas
-  node -v
-  python --version
-  git --version
+1. Clonar el repositorio
+2. **Pedir al líder del equipo el archivo `.env`** por WhatsApp o correo (nunca está en Git)
+3. Seguir las secciones de instalación de este README según tu rol
 
-================================================================================
-## 1. CREAR CARPETA RAÍZ DEL PROYECTO
-================================================================================
+---
 
-  mkdir spotify-rag
-  cd spotify-rag
-  git init
+## 0. Prerrequisitos
 
-================================================================================
-## 2. FRONTEND — Next.js 14 + Tailwind CSS
-================================================================================
+| Herramienta | Versión mínima | Link |
+|---|---|---|
+| Node.js | 20.x | https://nodejs.org |
+| Python | 3.10 – 3.12 ⚠️ (ver nota) | https://python.org |
+| Git | cualquiera | https://git-scm.com |
 
-  # Crear proyecto Next.js (el asistente interactivo preguntará opciones)
-  # Responder EXACTAMENTE así a cada pregunta:
-  #
-  #   Would you like to use TypeScript?          → No
-  #   Would you like to use ESLint?              → Yes
-  #   Would you like to use Tailwind CSS?        → Yes
-  #   Would you like your code inside a `src/`?  → Yes
-  #   Would you like to use App Router?          → Yes
-  #   Would you like to use Turbopack?           → No
-  #   Would you like to customize the alias?     → No
+> ⚠️ **IMPORTANTE sobre Python:** usar Python 3.10, 3.11 o 3.12.
+> Python 3.13 causa errores de compilación con numpy y sentence-transformers en Windows.
+> Descarga Python 3.12 desde https://python.org/downloads y asegúrate de marcarlo
+> como versión por defecto en el instalador.
 
-  npx create-next-app@14.2.3 frontend
+Verificar versiones instaladas:
 
-  cd frontend
+    node -v
+    python --version
+    git --version
 
-  # Instalar dependencias adicionales
-  npm install axios react-icons react-hot-toast clsx
+---
 
-  # Crear archivo de variables de entorno
-  echo "NEXT_PUBLIC_API_URL=http://localhost:4000/api" > .env.local
+## 1. Clonar el repositorio
 
-  # Verificar que funciona
-  npm run dev
-  # Abrir http://localhost:3000 — debe mostrar la página default de Next.js
-  # Ctrl+C para detener
+    git clone https://github.com/tu-usuario/spotify-rag.git
+    cd spotify-rag
 
-  cd ..
+---
 
-================================================================================
-## 3. BACKEND — Node.js + Express
-================================================================================
+## 2. Frontend — Next.js 14
 
-  # Crear carpeta y entrar
-  mkdir backend
-  cd backend
+    cd frontend
+    npm install
 
-  # Inicializar proyecto Node
-  npm init -y
+Crear archivo de variables de entorno:
 
-  # Instalar dependencias de producción
-  npm install express mongoose cors dotenv helmet express-rate-limit morgan axios express-validator
+    # Windows PowerShell
+    New-Item .env.local -ItemType File
+    notepad .env.local
 
-  # Instalar dependencias de desarrollo
-  npm install -D nodemon eslint
+    # macOS / Linux
+    cp .env.example .env.local
 
-  # Agregar scripts al package.json generado
-  # Abrir backend/package.json y reemplazar la sección "scripts" con:
-  #
-  #   "scripts": {
-  #     "dev": "nodemon src/index.js",
-  #     "start": "node src/index.js"
-  #   }
-  #
-  # También agregar al final del package.json:
-  #   "type": "commonjs"
+Contenido de `.env.local`:
 
-  # Crear estructura de carpetas
-  mkdir -p src/config src/models src/routes src/controllers src/middlewares
+    NEXT_PUBLIC_API_URL=http://localhost:4000/api
 
-  # Crear archivo de entrada
-  echo "" > src/index.js
+Ejecutar en desarrollo:
 
-  # Crear archivo de variables de entorno
-  cat > .env << 'EOF'
-PORT=4000
-NODE_ENV=development
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/spotify_rag?retryWrites=true&w=majority
-PYTHON_SERVICE_URL=http://localhost:5000
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-CORS_ORIGIN=http://localhost:3000
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX=100
-EOF
+    npm run dev
+    # Disponible en: http://localhost:3000
 
-  # Reemplazar <user>, <password> y el cluster con tus datos reales de MongoDB Atlas
+---
 
-  cd ..
+## 3. Backend — Node.js + Express
 
-================================================================================
-## 4. MICROSERVICIO PYTHON — Embeddings + Chunking
-================================================================================
+    cd backend
+    npm install
 
-  # Crear carpeta y entrar
-  mkdir python_service
-  cd python_service
+Crear archivo de variables de entorno:
 
-  # Crear entorno virtual
-  python -m venv venv
+    # Windows PowerShell
+    New-Item .env -ItemType File
+    notepad .env
 
-  # Activar entorno virtual
-  # Windows:
-  venv\Scripts\activate
-  # macOS / Linux:
-  source venv/bin/activate
+    # macOS / Linux
+    cp .env.example .env
 
-  # Crear requirements.txt
-  cat > requirements.txt << 'EOF'
-fastapi==0.111.0
+Contenido de `.env` (pedir valores reales al líder del equipo):
+
+    PORT=4000
+    NODE_ENV=development
+    MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/spotify_rag
+    GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    CORS_ORIGIN=http://localhost:3000
+    RATE_LIMIT_WINDOW_MS=900000
+    RATE_LIMIT_MAX=100
+
+Ejecutar en desarrollo:
+
+    npm run dev
+    # Disponible en: http://localhost:4000
+
+Verificar que está conectado a MongoDB:
+
+    curl http://localhost:4000/api/health
+    # Esperado: { "status": "ok", "mongo": "connected" }
+
+---
+
+## 4. Microservicio Python — Solo Ingesta (no se despliega)
+
+> Este servicio corre UNA SOLA VEZ localmente para generar los embeddings
+> y cargar los datos a MongoDB Atlas. No sube a producción.
+
+    cd python_service
+
+Crear entorno virtual con Python 3.11:
+
+    # Windows
+    py -3.11 -m venv venv
+    venv\Scripts\activate
+
+    # macOS / Linux
+    py -3.11 -m venv venv
+    source venv/bin/activate
+
+Instalar dependencias:
+
+    pip install -r requirements.txt
+
+Crear archivo de variables de entorno:
+
+    # Windows PowerShell
+    New-Item .env -ItemType File
+    notepad .env
+
+    # macOS / Linux
+    cp .env.example .env
+
+Contenido de `.env`:
+
+    MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/spotify_rag
+    GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    PORT=5000
+
+Ejecutar ingesta de datos (una sola vez):
+
+    python scripts/ingest_data.py
+
+---
+
+## 5. Orden de Ejecución para Desarrollo Local
+
+    # Terminal 1 — Backend Node.js
+    cd backend
+    npm run dev
+
+    # Terminal 2 — Frontend Next.js
+    cd frontend
+    npm run dev
+
+    # El microservicio Python solo cuando se necesite reingestar datos
+    cd python_service && source venv/bin/activate && python scripts/ingest_data.py
+
+---
+
+## 6. Despliegue en Producción
+
+| Capa | Plataforma | Costo | Notas |
+|---|---|---|---|
+| Frontend | Vercel | Gratis permanente | Conectar repo GitHub, carpeta /frontend |
+| Backend | Render.com | Gratis permanente | Se duerme 15 min sin tráfico, despierta solo |
+| Base de datos | MongoDB Atlas M0 | Gratis permanente | 512 MB |
+| LLM | Groq API | Gratis con cuota | Llama 3.1, muy rápido |
+| Python | No se despliega | — | Solo corre local para ingesta |
+
+### Deploy Frontend en Vercel
+
+    npm install -g vercel
+    cd frontend
+    vercel login
+    vercel --prod
+
+O conectar desde https://vercel.com/new importando el repo de GitHub.
+Agregar variable de entorno en Vercel: `NEXT_PUBLIC_API_URL=https://tu-backend.onrender.com/api`
+
+### Deploy Backend en Render
+
+1. Ir a https://render.com → New → Web Service
+2. Conectar repositorio GitHub
+3. Root Directory: `backend`
+4. Build Command: `npm install`
+5. Start Command: `npm start`
+6. Agregar todas las variables de `.env` en la sección Environment
+
+---
+
+## 7. Estructura de Carpetas
+
+    spotify-rag/
+    ├── .gitignore
+    ├── README.md
+    │
+    ├── frontend/                        # Next.js 14 — Vercel
+    │   ├── .env.local                   # ← NO subir a Git
+    │   ├── .env.example                 # plantilla sin valores reales
+    │   ├── package.json
+    │   └── src/
+    │       ├── app/
+    │       │   ├── layout.jsx           # Layout global (navbar)
+    │       │   ├── page.jsx             # Home: canciones destacadas
+    │       │   ├── search/
+    │       │   │   └── page.jsx         # Búsqueda semántica + respuesta RAG
+    │       │   ├── artists/
+    │       │   │   ├── page.jsx         # Listado de artistas
+    │       │   │   └── [id]/page.jsx    # Perfil artista + sus canciones
+    │       │   ├── playlists/
+    │       │   │   ├── page.jsx         # Playlists del usuario
+    │       │   │   └── [id]/page.jsx    # Detalle de playlist
+    │       │   └── song/
+    │       │       └── [id]/page.jsx    # Detalle canción + emociones + reseñas
+    │       ├── components/
+    │       │   ├── layout/
+    │       │   │   └── Navbar.jsx
+    │       │   ├── search/
+    │       │   │   ├── SearchBar.jsx    # Input búsqueda semántica
+    │       │   │   └── RAGResponse.jsx  # Respuesta del LLM
+    │       │   ├── music/
+    │       │   │   ├── SongCard.jsx
+    │       │   │   ├── ArtistCard.jsx
+    │       │   │   └── PlaylistCard.jsx
+    │       │   └── ui/
+    │       │       ├── Button.jsx
+    │       │       ├── Badge.jsx        # Géneros y emociones
+    │       │       └── Spinner.jsx
+    │       ├── lib/
+    │       │   └── api.js               # Axios + fetch functions
+    │       └── hooks/
+    │           ├── useSearch.js
+    │           └── useSongs.js
+    │
+    ├── backend/                         # Node.js + Express — Render
+    │   ├── .env                         # ← NO subir a Git
+    │   ├── .env.example                 # plantilla sin valores reales
+    │   ├── package.json
+    │   └── src/
+    │       ├── index.js                 # Entry point
+    │       ├── config/
+    │       │   └── db.js                # Conexión MongoDB Atlas
+    │       ├── models/
+    │       │   ├── Song.js
+    │       │   ├── Artist.js
+    │       │   ├── Album.js
+    │       │   ├── User.js
+    │       │   ├── Playlist.js
+    │       │   ├── Chunk.js             # RAG chunks
+    │       │   ├── Query.js             # Consultas + resultados embebidos
+    │       │   └── Event.js             # usuario + cancion + emocion
+    │       ├── routes/
+    │       │   ├── songs.routes.js
+    │       │   ├── artists.routes.js
+    │       │   ├── playlists.routes.js
+    │       │   ├── search.routes.js     # POST /search
+    │       │   └── rag.routes.js        # POST /rag
+    │       ├── controllers/
+    │       │   ├── songs.controller.js
+    │       │   ├── artists.controller.js
+    │       │   ├── playlists.controller.js
+    │       │   ├── search.controller.js
+    │       │   └── rag.controller.js
+    │       └── middlewares/
+    │           ├── errorHandler.js
+    │           └── validateRequest.js
+    │
+    └── python_service/                  # Solo local — ingesta única
+        ├── .env                         # ← NO subir a Git
+        ├── .env.example
+        ├── requirements.txt
+        ├── main.py
+        ├── scripts/
+        │   └── ingest_data.py           # Ejecutar una sola vez
+        └── services/
+            ├── embedder.py              # sentence-transformers (texto)
+            ├── image_embedder.py        # OpenCLIP (portadas)
+            └── chunker.py              # fixed_size / sentence_aware / semantic
+
+---
+
+## 8. Seguridad — Reglas del Equipo
+
+- NUNCA subir archivos `.env` a Git
+- Compartir credenciales solo por canal privado (WhatsApp, correo)
+- Rotar API keys si se comprometen:
+  - Groq: https://console.groq.com/keys
+  - MongoDB Atlas: cloud.mongodb.com → Database Access
+- Verificar antes de cada commit: `git status` — si aparece un `.env` en verde, detener
+
+---
+
+## 9. requirements.txt del Microservicio Python
+
+> Compatibles con Python 3.10 / 3.11 / 3.12 (NO usar Python 3.13 en Windows)
+
+    fastapi==0.111.0
 uvicorn==0.30.1
 pymongo==4.7.3
-sentence-transformers==3.0.1
+sentence-transformers==2.7.0
 langchain==0.2.6
 langchain-text-splitters==0.2.2
 open-clip-torch==2.24.0
-Pillow==10.4.0
+Pillow==10.3.0
 numpy==1.26.4
 python-dotenv==1.0.1
 groq==0.9.0
 httpx==0.27.0
-EOF
-
-  # Instalar dependencias
-  pip install -r requirements.txt
-
-  # Crear estructura de carpetas
-  mkdir -p scripts services
-
-  # Crear archivos vacíos base
-  echo "" > main.py
-  echo "" > scripts/ingest_data.py
-  echo "" > services/embedder.py
-  echo "" > services/image_embedder.py
-  echo "" > services/chunker.py
-
-  # Crear archivo de variables de entorno
-  cat > .env << 'EOF'
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/spotify_rag
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PORT=5000
-EOF
-
-  cd ..
-
-================================================================================
-## 5. CREAR .gitignore EN LA RAÍZ
-================================================================================
-
-  cat > .gitignore << 'EOF'
-# Entornos y secretos
-.env
-.env.local
-.env.production
-
-# Node
-node_modules/
-.next/
-dist/
-build/
-
-# Python
-venv/
-__pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-
-# Sistema
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-EOF
-
-================================================================================
-## 6. ESTRUCTURA FINAL DE CARPETAS
-================================================================================
-
-  # Así debe quedar spotify-rag/ después de ejecutar todos los comandos:
-
-  spotify-rag/
-  ├── .gitignore
-  ├── frontend/                        # Next.js 14
-  │   ├── .env.local                   # ← NO subir a Git
-  │   ├── package.json
-  │   ├── next.config.mjs
-  │   ├── tailwind.config.js
-  │   ├── public/
-  │   └── src/
-  │       ├── app/
-  │       │   ├── layout.jsx           # Layout global (navbar, footer)
-  │       │   ├── page.jsx             # Home → canciones destacadas
-  │       │   ├── search/
-  │       │   │   └── page.jsx         # Búsqueda semántica + respuesta RAG
-  │       │   ├── artists/
-  │       │   │   ├── page.jsx         # Listado de artistas
-  │       │   │   └── [id]/page.jsx    # Perfil de artista + canciones
-  │       │   ├── playlists/
-  │       │   │   ├── page.jsx         # Playlists del usuario
-  │       │   │   └── [id]/page.jsx    # Detalle de playlist
-  │       │   └── song/
-  │       │       └── [id]/page.jsx    # Detalle canción + emociones + reseñas
-  │       ├── components/
-  │       │   ├── layout/
-  │       │   │   └── Navbar.jsx
-  │       │   ├── search/
-  │       │   │   ├── SearchBar.jsx    # Input de búsqueda semántica
-  │       │   │   └── RAGResponse.jsx  # Respuesta generada por el LLM
-  │       │   ├── music/
-  │       │   │   ├── SongCard.jsx     # Tarjeta de canción
-  │       │   │   ├── ArtistCard.jsx   # Tarjeta de artista
-  │       │   │   └── PlaylistCard.jsx # Tarjeta de playlist
-  │       │   └── ui/
-  │       │       ├── Button.jsx
-  │       │       ├── Badge.jsx        # Para géneros y emociones
-  │       │       └── Spinner.jsx
-  │       ├── lib/
-  │       │   └── api.js               # Instancia axios + funciones de fetch
-  │       └── hooks/
-  │           ├── useSearch.js         # Hook búsqueda semántica
-  │           └── useSongs.js          # Hook CRUD canciones
-  │
-  ├── backend/                         # Node.js + Express
-  │   ├── .env                         # ← NO subir a Git
-  │   ├── package.json
-  │   └── src/
-  │       ├── index.js                 # Entry point
-  │       ├── config/
-  │       │   └── db.js                # Conexión MongoDB Atlas
-  │       ├── models/
-  │       │   ├── Song.js
-  │       │   ├── Artist.js
-  │       │   ├── Album.js
-  │       │   ├── User.js
-  │       │   ├── Playlist.js
-  │       │   ├── Chunk.js             # RAG chunks
-  │       │   ├── Query.js             # Consultas + resultados embebidos
-  │       │   └── Event.js             # usuario + cancion + emocion
-  │       ├── routes/
-  │       │   ├── songs.routes.js
-  │       │   ├── artists.routes.js
-  │       │   ├── playlists.routes.js
-  │       │   ├── search.routes.js     # POST /search
-  │       │   └── rag.routes.js        # POST /rag
-  │       ├── controllers/
-  │       │   ├── songs.controller.js
-  │       │   ├── artists.controller.js
-  │       │   ├── playlists.controller.js
-  │       │   ├── search.controller.js
-  │       │   └── rag.controller.js
-  │       └── middlewares/
-  │           ├── errorHandler.js
-  │           └── validateRequest.js
-  │
-  └── python_service/                  # Embeddings + Chunking
-      ├── .env                         # ← NO subir a Git
-      ├── requirements.txt
-      ├── main.py                      # FastAPI /embed endpoint
-      ├── scripts/
-      │   └── ingest_data.py           # Carga inicial → MongoDB
-      └── services/
-          ├── embedder.py              # sentence-transformers
-          ├── image_embedder.py        # OpenCLIP
-          └── chunker.py              # fixed_size / sentence_aware / semantic
-
-================================================================================
-## 7. ORDEN DE EJECUCIÓN PARA DESARROLLO LOCAL
-================================================================================
-
-  # Terminal 1 — Python service
-  cd spotify-rag/python_service
-  source venv/bin/activate          # macOS/Linux
-  # venv\Scripts\activate           # Windows
-  python main.py
-
-  # Terminal 2 — Backend Node.js
-  cd spotify-rag/backend
-  npm run dev
-
-  # Terminal 3 — Frontend Next.js
-  cd spotify-rag/frontend
-  npm run dev
-
-  # Verificar conexión backend
-  curl http://localhost:4000/api/health
-  # Esperado: { "status": "ok", "mongo": "connected" }
-
-================================================================================
-## 8. CONFIGURACIÓN MONGODB ATLAS (índice vectorial)
-================================================================================
-
-  # Una vez creado el cluster M0 en Atlas:
-  # 1. Ir a Browse Collections → crear base de datos: spotify_rag
-  # 2. Ir a Atlas Search → Create Search Index → JSON Editor → colección chunks
-
-  {
-    "fields": [
-      {
-        "type": "vector",
-        "path": "embedding",
-        "numDimensions": 384,
-        "similarity": "cosine"
-      },
-      { "type": "filter", "path": "tipo_fuente" },
-      { "type": "filter", "path": "estrategia_chunking" }
-    ]
-  }
-
-================================================================================#   R A G - R A G A S - L L M - N o S q l  
- 
