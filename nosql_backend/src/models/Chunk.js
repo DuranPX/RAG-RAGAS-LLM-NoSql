@@ -1,105 +1,103 @@
+const { ObjectId } = require('mongodb');
+const { getDB } = require('../config/db');
 
-// Es la pieza central del pipeline RAG.
-
-
-const mongoose = require('mongoose');
-
-const chunkSchema = new mongoose.Schema(
-  {
-    // doc_id: referencia al documento padre (cancion, artista o album)
-    // Equivalente a id_cancion / id_artista / id_album del SQL
+const chunkSchema = {
+  bsonType: 'object',
+  required: ['doc_id', 'tipo_fuente', 'chunk_index', 'estrategia_chunking', 'chunk_texto', 'embedding', 'modelo'],
+  properties: {
     doc_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: [true, 'doc_id es obligatorio']
+      bsonType: 'objectId'
     },
-
-    // tipo_fuente: indica de qué colección viene doc_id
     tipo_fuente: {
-      type: String,
-      required: [true, 'tipo_fuente es obligatorio'],
-      enum: {
-        values: ['cancion', 'artista', 'album'],
-        message: 'tipo_fuente debe ser cancion, artista o album'
-      }
+      bsonType: 'string',
+      enum: ['cancion', 'artista', 'album']
     },
-
-    // chunk_index: posición del fragmento dentro del documento padre
     chunk_index: {
-      type: Number,
-      required: [true, 'chunk_index es obligatorio'],
-      min: 0
+      bsonType: 'int',
+      minimum: 0
     },
-
-    // estrategia_chunking: campo obligatorio del proyecto
-    // Indica cómo se fragmentó el texto
     estrategia_chunking: {
-      type: String,
-      required: [true, 'estrategia_chunking es obligatorio'],
-      enum: {
-        values: ['fixed-size', 'sentence-aware'],
-        message: 'estrategia_chunking debe ser fixed-size o sentence-aware'
-      }
+      bsonType: 'string',
+      enum: ['fixed-size', 'sentence-aware']
     },
-
-    // chunk_texto: el fragmento de texto
-    // Equivalente a letra (text) del SQL pero parcial
     chunk_texto: {
-      type: String,
-      required: [true, 'chunk_texto es obligatorio']
+      bsonType: 'string'
     },
-
-    // embedding: vector del fragmento (384 dims, mismo modelo que emb_letra)
-    // Equivalente a emb_letra vector(384) del SQL pero a nivel de chunk
     embedding: {
-      type: [Number],
-      required: [true, 'embedding es obligatorio'],
-      validate: {
-        validator: v => v.length === 384,
-        message: 'embedding debe tener exactamente 384 dimensiones'
-      }
+      bsonType: 'array',
+      minItems: 384,
+      maxItems: 384,
+      items: { bsonType: 'double' }
     },
-
-    // modelo: nombre del modelo que generó el embedding
-    // Valor esperado: "all-MiniLM-L6-v2"
     modelo: {
-      type: String,
-      required: [true, 'modelo es obligatorio'],
-      trim: true
+      bsonType: 'string'
     },
-
-    // fecha_ingesta: cuándo se procesó este chunk
-    // Equivalente a fecha timestamp del SQL
     fecha_ingesta: {
-      type: Date,
-      default: Date.now
+      bsonType: 'date'
     },
-
-    // metadata adicional opcional (para variaciones entre estrategias)
-    // fixed-size puede guardar: { tokens: 128 }
-    // sentence-aware puede guardar: { n_oraciones: 3 }
     metadata: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {}
+      bsonType: 'object'
     }
-  },
-  {
-    collection: 'chunks',
-    timestamps: true
   }
-);
+};
 
-// --- Índices ---
+const getCollection = () => getDB().collection('chunks');
 
-// Índice compuesto: todos los chunks de un documento en orden
-chunkSchema.index({ doc_id: 1, chunk_index: 1 });
+const ChunkModel = {
+  insertOne: async (doc) => {
+    const col = getCollection();
+    return col.insertOne({
+      ...doc,
+      fecha_ingesta: doc.fecha_ingesta || new Date(),
+      createdAt: new Date()
+    });
+  },
 
-// Índice por estrategia para el experimento comparativo
-chunkSchema.index({ estrategia_chunking: 1 });
+  insertMany: async (docs) => {
+    const col = getCollection();
+    const now = new Date();
+    return col.insertMany(docs.map(d => ({
+      ...d,
+      fecha_ingesta: d.fecha_ingesta || now,
+      createdAt: now
+    })));
+  },
 
-// Índice por tipo de fuente
-chunkSchema.index({ tipo_fuente: 1 });
+  findByDocId: async (docId) => {
+    const col = getCollection();
+    return col.find({ doc_id: new ObjectId(docId) })
+      .sort({ chunk_index: 1 })
+      .toArray();
+  },
 
-// Nota: el índice vectorial sobre "embedding" se crea en MongoDB Atlas UI
-// Nombre: vector_idx_embedding_chunks | path: embedding | dims: 384 | cosine
+  findByEstrategia: async (estrategia) => {
+    const col = getCollection();
+    return col.find({ estrategia_chunking: estrategia }).toArray();
+  },
 
-module.exports = mongoose.model('Chunk', chunkSchema);
+  vectorSearch: async (queryVector, limit = 5) => {
+    const col = getCollection();
+    return col.aggregate([
+      {
+        $vectorSearch: {
+          index: 'vector_idx_embedding_chunks',
+          path: 'embedding',
+          queryVector,
+          numCandidates: limit * 10,
+          limit
+        }
+      },
+      {
+        $project: {
+          chunk_texto: 1,
+          estrategia_chunking: 1,
+          tipo_fuente: 1,
+          doc_id: 1,
+          score: { $meta: 'vectorSearchScore' }
+        }
+      }
+    ]).toArray();
+  }
+};
+
+module.exports = { ChunkModel, chunkSchema };

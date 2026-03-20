@@ -1,76 +1,50 @@
-// =============================================================
-// db.js — Conexión a MongoDB Atlas
-// Equivalente NoSQL de la configuración de conexión a PostgreSQL
-//
-// En el modelo SQL se usaba pg (node-postgres) con pool de conexiones.
-// En MongoDB se usa Mongoose con reconexión automática.
-// =============================================================
+require('dotenv').config();
+const { MongoClient } = require('mongodb');
 
-const mongoose = require('mongoose');
+const MONGO_URI = process.env.MONGO_URI;
+const DB_NAME   = process.env.DB_NAME || 'spotifyRAG';
 
-// URI de conexión — equivalente al DATABASE_URL de PostgreSQL
-const MONGO_URI = process.env.MONGO_URI ||
-  'mongodb+srv://admin:mipass123@cluster0.sf3nhqw.mongodb.net/spotifyRAG?retryWrites=true&w=majority';
+if (!MONGO_URI) {
+  throw new Error('MONGO_URI no definida en .env');
+}
 
-// Nombre de la base de datos — equivalente al schema en PostgreSQL
-const DB_NAME = process.env.DB_NAME || 'spotifyRAG';
-
-// Opciones de conexión
-const mongoOptions = {
-  dbName: DB_NAME,
-
-  // Tamaño del pool de conexiones
-  // En SQL era pool.max = 10, aquí se mantiene el mismo valor
+const client = new MongoClient(MONGO_URI, {
   maxPoolSize: 10,
   minPoolSize: 2,
-
-  // Timeout de conexión (ms)
   serverSelectionTimeoutMS: 5000,
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 45000
-};
+  connectTimeoutMS: 10000
+});
 
-// --- Función principal de conexión ---
+let db = null;
+
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(MONGO_URI, mongoOptions);
-
-    console.log(`✅ MongoDB conectado: ${conn.connection.host}`);
-    console.log(`📦 Base de datos: ${conn.connection.name}`);
-    console.log(`🔗 Colecciones disponibles: canciones, chunks`);
-
-    return conn;
+    await client.connect();
+    db = client.db(DB_NAME);
+    console.log('✅ MongoDB conectado');
+    console.log('📦 Base de datos: ' + DB_NAME);
+    return db;
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
     process.exit(1);
   }
 };
 
-// --- Eventos de conexión (equivalente a listeners del pool en pg) ---
+const getDB = () => {
+  if (!db) throw new Error('Base de datos no inicializada. Llama connectDB() primero.');
+  return db;
+};
 
-mongoose.connection.on('connected', () => {
-  console.log('🟢 Mongoose conectado a MongoDB Atlas');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('🔴 Error en la conexión de Mongoose:', err.message);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('🟡 Mongoose desconectado de MongoDB');
-});
-
-// Cierre limpio al terminar el proceso (equivalente a pool.end() en pg)
 process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  console.log('🔌 Conexión a MongoDB cerrada correctamente (SIGINT)');
+  await client.close();
+  console.log('🔌 MongoDB cerrado');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  await mongoose.connection.close();
-  console.log('🔌 Conexión a MongoDB cerrada correctamente (SIGTERM)');
+  await client.close();
+  console.log('🔌 MongoDB cerrado');
   process.exit(0);
 });
 
-module.exports = connectDB;
+module.exports = { connectDB, getDB };
