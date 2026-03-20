@@ -32,7 +32,9 @@ function getCollections() {
     playlists: database.collection("playlists"),
     events:    database.collection("events"),
     queries:   database.collection("queries"),
-    canciones: database.collection("canciones"),  // para RAG / vectorSearch de atlas 
+    canciones: database.collection("canciones"),
+    artists:   database.collection("artists"),
+    albums:    database.collection("albums"),
   };
 }
 
