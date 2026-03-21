@@ -8,6 +8,8 @@ const User     = require("../models/User");
 const Playlist = require("../models/Playlist");
 const Event    = require("../models/Event");
 const Query    = require("../models/Query");
+const Artist  = require("../models/Artist");
+const Album   = require("../models/Album");
 
 // Helper uniforme de errores - hook
 const handle = (fn) => async (req, res) => {
@@ -124,5 +126,117 @@ router.get("/queries/:id", handle(async (req) => {
 // HEALTH
 // ===========================================================
 router.get("/health", (_, res) => res.json({ status: "ok" }));
+
+// ===========================================================
+// ARTISTS
+// ===========================================================
+
+router.get("/artists", handle(async () => {
+  return Artist.findAll();
+}));
+
+router.get("/artists/:id", handle(async (req) => {
+  const artist = await Artist.findById(req.params.id);
+  if (!artist) throw { status: 404, errores: ["Artist no encontrado"] };
+  return artist;
+}));
+
+router.post("/artists", handle(async (req) => {
+  return Artist.create(req.body);
+}));
+
+router.put("/artists/:id", handle(async (req) => {
+  return Artist.update(req.params.id, req.body);
+}));
+
+router.delete("/artists/:id", handle(async (req) => {
+  return Artist.delete(req.params.id);
+}));
+
+// ===========================================================
+// ALBUMS
+// ===========================================================
+
+router.get("/albums", handle(async () => {
+  return Album.findAll();
+}));
+
+router.get("/albums/:id", handle(async (req) => {
+  const album = await Album.findById(req.params.id);
+  if (!album) throw { status: 404, errores: ["Album no encontrado"] };
+  return album;
+}));
+
+router.post("/albums", handle(async (req) => {
+  return Album.create(req.body);
+}));
+
+router.put("/albums/:id", handle(async (req) => {
+  return Album.update(req.params.id, req.body);
+}));
+
+router.delete("/albums/:id", handle(async (req) => {
+  return Album.delete(req.params.id);
+}));
+
+// ===========================================================
+// SEARCH
+// ===========================================================
+router.post("/search", handle(async (req) => {
+
+  const { texto, anio, pais, genero } = req.body;
+  const { albums, artists } = require("../config/db").getCollections();
+
+  let artistFilter = {};
+  let albumFilter  = {};
+
+  // FILTRO DE ARTISTAS
+  if (pais) artistFilter.pais = pais;
+
+  if (genero) {
+    artistFilter.generos = { $regex: genero, $options: "i" };
+  }
+
+  if (texto) {
+    artistFilter.nombre = { $regex: texto, $options: "i" };
+  }
+
+  // 1. BUSCAR ARTISTAS PRIMERO
+  const artistsRes = await artists.find(artistFilter).toArray();
+  const artistIds = artistsRes.map(a => a._id);
+
+  // FILTRO DE ÁLBUMES
+  if (anio) {
+    albumFilter.anio = Number(anio);
+  }
+
+  if (texto) {
+    albumFilter.titulo = { $regex: texto, $options: "i" };
+  }
+
+  // 2. RELACIÓN: ÁLBUMES DE ESOS ARTISTAS
+  if (artistIds.length > 0) {
+    albumFilter.id_artista = { $in: artistIds };
+  }
+
+  const albumsRes = await albums.find(albumFilter).toArray();
+  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
+
+  const extraArtists = await artists.find({
+    _id: { $in: artistIdsFromAlbums }
+  }).toArray();
+
+  const allArtists = [
+    ...artistsRes,
+    ...extraArtists.filter(a =>
+      !artistsRes.some(a2 => a2._id.toString() === a._id.toString())
+    )
+  ];
+
+  return {
+    albums: albumsRes,
+    artists: allArtists
+  };
+}));
 
 module.exports = router;
