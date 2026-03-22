@@ -1,14 +1,60 @@
+'use client';
+
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
 import SongCard from '@/components/cards/SongCard';
 import ArtistCard from '@/components/cards/ArtistCard';
 import SongsTable from '@/components/tables/SongsTable';
-import { mockSongs, mockArtists } from '@/lib/mockData';
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
+import ErrorState from '@/components/ui/ErrorState';
+import EmptyState from '@/components/ui/EmptyState';
+import { useApi } from '@/shared/hooks/useApi';
+import { songService } from '@/api/services/songService';
+import { artistService } from '@/api/services/artistService';
 import { Button } from '@/components/ui/button';
 import { Play, Sparkles, Image as ImageIcon, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
+// Formatea segundos a mm:ss
+const formatDuration = (seconds) => {
+  if (!seconds) return '--:--';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 export default function HomePage() {
+  const { data: songs, isLoading: loadingSongs, error: errorSongs, refetch: refetchSongs } = useApi(
+    () => songService.getAll(),
+    []
+  );
+
+  const { data: artists, isLoading: loadingArtists, error: errorArtists, refetch: refetchArtists } = useApi(
+    () => artistService.getAll(),
+    []
+  );
+
+  const isLoading = loadingSongs || loadingArtists;
+  const hasError = errorSongs || errorArtists;
+
+  // Mapea canciones del backend al formato de SongsTable (SongRow)
+  const mapSongToRow = (song) => ({
+    id: song._id,
+    title: song.titulo,
+    artist: song.artista?.nombre || song.nombre_artista || '',
+    album: song.album?.titulo || '',
+    genre: song.genero || '',
+    duration: formatDuration(song.duracion),
+    plays: song.genero || '',
+    popularity: Math.floor(Math.random() * 40) + 60,
+    coverUrl: undefined,
+  });
+
+  const handleRetry = () => {
+    refetchSongs();
+    refetchArtists();
+  };
+
   return (
     <AppShell>
       <div className="space-y-12">
@@ -32,7 +78,6 @@ export default function HomePage() {
             </div>
             
             <div className="w-full md:w-[400px] h-[200px] shrink-0">
-              {/* TODO: replace with hero artwork 400x200px */}
               <div className="w-full h-full bg-purple-400/20 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center group cursor-pointer hover:bg-purple-400/30 transition-all border-dashed">
                 <ImageIcon className="h-12 w-12 text-white/40 mb-3 group-hover:scale-110 transition-transform" />
                 <span className="text-white/40 text-sm font-medium">Hero Artwork Placeholder</span>
@@ -58,20 +103,35 @@ export default function HomePage() {
             </Link>
           </div>
           
-          <div className="flex gap-6 overflow-x-auto pb-6 -mx-2 px-2 custom-scrollbar snap-x">
-             {/* TODO: replace with real API data from /api/canciones */}
-             {mockSongs.slice(0, 6).map((song) => (
-               <div key={song.id} className="snap-start shrink-0">
-                 <SongCard 
-                    title={song.title}
-                    artist={song.artist}
-                    genre={song.genre}
-                    duration={song.duration}
-                    plays={song.plays}
-                 />
-               </div>
-             ))}
-          </div>
+          {errorSongs ? (
+            <ErrorState message={errorSongs} onRetry={refetchSongs} />
+          ) : loadingSongs ? (
+            <div className="flex gap-6 overflow-x-auto pb-6 -mx-2 px-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="shrink-0 w-[180px] h-[280px] rounded-xl bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          ) : !songs?.length ? (
+            <EmptyState 
+              icon="music"
+              title="Sin canciones"
+              message="Aún no hay canciones en la base de datos. Ejecuta el seed para poblar datos."
+            />
+          ) : (
+            <div className="flex gap-6 overflow-x-auto pb-6 -mx-2 px-2 custom-scrollbar snap-x">
+              {songs.slice(0, 6).map((song) => (
+                <div key={song._id} className="snap-start shrink-0">
+                  <SongCard 
+                    title={song.titulo}
+                    artist={song.artista?.nombre || song.nombre_artista || ''}
+                    genre={song.genero || ''}
+                    duration={formatDuration(song.duracion)}
+                    plays={song.emociones?.[0] || song.genero || ''}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Section 3 — Artistas Populares */}
@@ -80,27 +140,51 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold text-white tracking-tight">Artistas Sugeridos</h2>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-             {mockArtists.map((artist) => (
-               <ArtistCard 
-                  key={artist.id}
-                  name={artist.name}
-                  country={artist.country}
-                  genre={artist.genre}
-                  listeners={artist.listeners}
-               />
-             ))}
-          </div>
+          {errorArtists ? (
+            <ErrorState message={errorArtists} onRetry={refetchArtists} />
+          ) : loadingArtists ? (
+            <LoadingSkeleton variant="card" rows={4} />
+          ) : !artists?.length ? (
+            <EmptyState 
+              icon="users"
+              title="Sin artistas"
+              message="No hay artistas registrados aún."
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {artists.map((artist) => (
+                <ArtistCard 
+                  key={artist._id}
+                  name={artist.nombre}
+                  country={artist.pais || 'Desconocido'}
+                  genre={artist.generos?.[0] || 'N/A'}
+                  listeners={''}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Section 4 — Tabla completa de canciones */}
         <section className="space-y-6 pb-12">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white tracking-tight">Biblioteca de Canciones</h2>
-            <div className="text-xs text-white/40">Total: {mockSongs.length} registros</div>
+            <div className="text-xs text-white/40">Total: {songs?.length || 0} registros</div>
           </div>
           
-          <SongsTable songs={mockSongs.slice(0, 6)} />
+          {errorSongs ? (
+            <ErrorState message={errorSongs} onRetry={refetchSongs} />
+          ) : loadingSongs ? (
+            <LoadingSkeleton variant="row" rows={6} />
+          ) : !songs?.length ? (
+            <EmptyState 
+              icon="music"
+              title="Sin canciones"
+              message="Ejecuta el seed para poblar la biblioteca."
+            />
+          ) : (
+            <SongsTable songs={songs.slice(0, 6).map(mapSongToRow)} />
+          )}
         </section>
       </div>
     </AppShell>

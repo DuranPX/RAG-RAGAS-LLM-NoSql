@@ -11,11 +11,20 @@ import {
 } from '@/components/ui/table';
 import { MoreHorizontal, ListMusic, User, Calendar, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Playlist } from '@/lib/mockData';
 import Link from 'next/link';
 
+interface PlaylistRow {
+  id: string;
+  title: string;
+  description: string;
+  songCount: number;
+  owner: string;
+  coverUrl?: string;
+  createdAt: string;
+}
+
 interface PlaylistsTableProps {
-  playlists: Playlist[];
+  playlists: PlaylistRow[];
 }
 
 const PlaylistsTable: React.FC<PlaylistsTableProps> = ({ playlists }) => {
@@ -71,7 +80,6 @@ const PlaylistsTable: React.FC<PlaylistsTableProps> = ({ playlists }) => {
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
-                {/* TODO: fetch from /api/playlists */}
               </TableCell>
             </TableRow>
           ))}
