@@ -1,0 +1,8 @@
+{
+    "python.defaultInterpreterPath": "python_service\\venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "python_service\\venv\\Lib\\site-packages"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
+}

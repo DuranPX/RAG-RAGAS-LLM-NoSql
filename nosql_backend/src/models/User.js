@@ -1,14 +1,12 @@
 // Driver nativo mongodb
-// Cada método estático reemplaza un RPC de Supabase
-
 const { getCollections } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
-// Validación básica de campos requeridos antes de tocar la DB
+// Validación básica de campos requeridos coon regex mínimo para correo
 function validateUsuario({ nombre, correo, plan_suscripcion }) {
   const errores = [];
   if (!nombre || typeof nombre !== "string") errores.push("nombre requerido");
-  if (!correo || !/^[^@]+@[^@]+\.[^@]+$/.test(correo)) errores.push("correo inválido"); //regex minimo
+  if (!correo || !/^[^@]+@[^@]+\.[^@]+$/.test(correo)) errores.push("correo inválido");
   if (!["free", "premium", "family"].includes(plan_suscripcion)) {
     errores.push("plan_suscripcion debe ser free, premium o family");
   }
@@ -17,14 +15,19 @@ function validateUsuario({ nombre, correo, plan_suscripcion }) {
 
 class User {
 
-  // FIND BY ID
-  // Operación simple — find directo, sin $lookup 
+  // Listar todos los usuarios
+  static async findAll() {
+    const { usuarios } = getCollections();
+    return usuarios.find({}).toArray();
+  }
+
+  // Buscar por ID
   static async findById(id) {
     const { usuarios } = getCollections();
     return usuarios.findOne({ _id: new ObjectId(id) });
   }
-  // CREATE
-  // portada embebida con URL iTunes — sin bucket
+
+  // Crear usuario con portada de iTunes opcional
   static async create({ nombre, correo, plan_suscripcion = "free", portada = null }) {
     const errores = validateUsuario({ nombre, correo, plan_suscripcion });
     if (errores.length) throw { status: 400, errores };
@@ -36,7 +39,7 @@ class User {
       correo,
       plan_suscripcion,
       tiempo_escucha: 0,
-      portada,              // es la url, les recuerdo
+      portada,
       fecha_registro: new Date(),
     };
 
@@ -44,8 +47,7 @@ class User {
     return { _id: result.insertedId, ...doc };
   }
 
-  // INCREMENTAR TIEMPO DE ESCUCHA - es valor agregado del SQL
-  // Reemplaza: incrementar_tiempo_escucha_atomic (RPC Supabase)
+  // Incrementar tiempo de escucha del usuario
   static async incrementarTiempo(id, minutos) {
     if (!minutos || minutos <= 0) throw { status: 400, errores: ["minutos debe ser > 0"] };
 
@@ -60,9 +62,7 @@ class User {
     return result;
   }
 
-  // EMOCIÓN DOMINANTE
-  // Aggregation sobre events — sin $lookup porque emocion está embebida
-  // Reemplaza: obtener_emocion_dominante_usuario (RPC Supabase)
+  // Obtener emoción predominante en sus eventos
   static async emocionDominante(id, dias = 365) {
     const { events } = getCollections();
 
@@ -94,9 +94,7 @@ class User {
     return events.aggregate(pipeline).toArray();
   }
 
-  // TOP ARTISTAS
-  // Aggregation sobre events — cancion_snapshot.nombre_artista embebido
-  // Reemplaza: top_artistas_por_usuario (RPC Supabase)
+  // Top artistas escuchados
   static async topArtistas(id, limit = 10) {
     const { events } = getCollections();
 

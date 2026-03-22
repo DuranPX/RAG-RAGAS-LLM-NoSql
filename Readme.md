@@ -1,10 +1,10 @@
-# 🎵 Spotify RAG — Sistema Musical Inteligente con MongoDB
+# Spotify RAG — Sistema Musical Inteligente con MongoDB
 > Plataforma de streaming musical con búsqueda semántica y pipeline RAG.
 > Stack: Next.js 14 · Node.js/Express · MongoDB Atlas · Python (ingesta única) · Groq
 
 ---
 
-## ⚡ Inicio Rápido para Colaboradores
+## Inicio Rápido para Colaboradores
 
 1. Clonar el repositorio
 2. **Pedir al líder del equipo el archivo `.env`** por WhatsApp o correo (nunca está en Git)
@@ -17,10 +17,10 @@
 | Herramienta | Versión mínima | Link |
 |---|---|---|
 | Node.js | 20.x | https://nodejs.org |
-| Python | 3.10 – 3.12 ⚠️ (ver nota) | https://python.org |
+| Python | 3.10 – 3.12 (ver nota) | https://python.org |
 | Git | cualquiera | https://git-scm.com |
 
-> ⚠️ **IMPORTANTE sobre Python:** usar Python 3.10, 3.11 o 3.12.
+> **IMPORTANTE sobre Python:** usar Python 3.10, 3.11 o 3.12.
 > Python 3.13 causa errores de compilación con numpy y sentence-transformers en Windows.
 > Descarga Python 3.12 desde https://python.org/downloads y asegúrate de marcarlo
 > como versión por defecto en el instalador.

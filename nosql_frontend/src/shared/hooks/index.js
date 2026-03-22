@@ -1,2 +1,1 @@
-// Placeholder for shared hooks
-export {};
+export { useApi } from './useApi';

@@ -12,10 +12,21 @@ import {
 import { Play, Heart, MoreHorizontal, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Song } from '@/lib/mockData';
+
+interface SongRow {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  genre: string;
+  duration: string;
+  plays: string;
+  popularity: number;
+  coverUrl?: string;
+}
 
 interface SongsTableProps {
-  songs: Song[];
+  songs: SongRow[];
 }
 
 const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
@@ -87,7 +98,6 @@ const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* TODO: fetch from Supabase cancion table */}
               </TableCell>
             </TableRow>
           ))}

@@ -1,17 +1,51 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PlaylistCard from '@/components/cards/PlaylistCard';
-import { mockPlaylists } from '@/lib/mockData';
+import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
+import ErrorState from '@/components/ui/ErrorState';
+import EmptyState from '@/components/ui/EmptyState';
+import { useApi } from '@/shared/hooks/useApi';
+import { playlistService } from '@/api/services/playlistService';
+import { userService } from '@/api/services/userService';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function PlaylistsPage() {
   const [activeTab, setActiveTab] = useState('Todas');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const tabs = ['Todas', 'Mis Favoritas', 'Recientes'];
+
+  // Fetch combinado: usuarios + sus playlists
+  const { data, isLoading, error, refetch } = useApi(async () => {
+    const allUsers = await userService.getAll();
+    const usersMap = {};
+    if (Array.isArray(allUsers)) {
+      allUsers.forEach(u => { usersMap[u._id] = u.nombre; });
+    }
+
+    const playlistPromises = Object.keys(usersMap).map(userId =>
+      playlistService.getByUser(userId).catch(() => [])
+    );
+    const playlistArrays = await Promise.all(playlistPromises);
+    const allPlaylists = playlistArrays.flat();
+
+    return { playlists: allPlaylists, users: usersMap };
+  }, []);
+
+  const playlists = data?.playlists || [];
+  const users = data?.users || {};
+
+  // Filtrar playlists por búsqueda
+  const filteredPlaylists = useMemo(() => 
+    playlists.filter(p =>
+      !searchQuery || p.titulo?.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [playlists, searchQuery]
+  );
 
   return (
     <AppShell>
@@ -53,24 +87,41 @@ export default function PlaylistsPage() {
             <Input 
               placeholder="Filtrar playlists..." 
               className="bg-transparent border-none focus-visible:ring-0 text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-          {mockPlaylists.map((playlist) => (
-            <PlaylistCard 
-              key={playlist.id}
-              id={playlist.id}
-              title={playlist.title}
-              description={playlist.description}
-              songCount={playlist.songCount}
-              owner={playlist.owner}
-            />
-          ))}
-          {/* TODO: fetch from /api/playlists */}
-        </div>
+        {error ? (
+          <ErrorState message={error} onRetry={refetch} />
+        ) : isLoading ? (
+          <LoadingSkeleton variant="card" rows={8} />
+        ) : !filteredPlaylists.length ? (
+          <EmptyState 
+            icon="playlist"
+            title={searchQuery ? 'Sin resultados' : 'Sin playlists'}
+            message={searchQuery 
+              ? `No se encontraron playlists que coincidan con "${searchQuery}".`
+              : 'Aún no hay playlists. Crea una nueva o ejecuta el seed para poblar datos.'
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
+            {filteredPlaylists.map((playlist) => (
+              <PlaylistCard 
+                key={playlist._id}
+                id={playlist._id}
+                title={playlist.titulo}
+                description={playlist.descripcion || ''}
+                songCount={playlist.canciones?.length || 0}
+                owner={users[playlist.id_usuario] || 'Usuario'}
+                coverUrl={playlist.portada?.url}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppShell>
   );
