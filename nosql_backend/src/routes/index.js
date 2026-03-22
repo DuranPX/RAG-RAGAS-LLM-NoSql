@@ -4,10 +4,10 @@
 const { Router } = require("express");
 const router = Router();
 
-const User     = require("../models/User");
+const User = require("../models/User");
 const Playlist = require("../models/Playlist");
-const Event    = require("../models/Event");
-const Query    = require("../models/Query");
+const Event = require("../models/Event");
+const Query = require("../models/Query");
 
 // Helper uniforme de errores - hook
 const handle = (fn) => async (req, res) => {
@@ -15,7 +15,7 @@ const handle = (fn) => async (req, res) => {
     const data = await fn(req, res);
     if (data !== undefined) res.json(data);
   } catch (err) {
-    const status  = err.status  || 500;
+    const status = err.status || 500;
     const mensaje = err.errores || [err.message || "Error interno"];
     res.status(status).json({ errores: mensaje });
   }
@@ -88,7 +88,7 @@ router.post("/events", handle(async (req) => {
 
 router.get("/events/usuario/:id_usuario", handle(async (req) => {
   const limit = parseInt(req.query.limit) || 50;
-  const dias  = parseInt(req.query.dias)  || 30;
+  const dias = parseInt(req.query.dias) || 30;
   return Event.findByUsuario(req.params.id_usuario, { limit, dias });
 }));
 
