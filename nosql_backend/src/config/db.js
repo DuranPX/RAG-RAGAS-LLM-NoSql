@@ -15,7 +15,18 @@ const client = new MongoClient(MONGO_URI, {
   connectTimeoutMS: 10000
 });
 
-let db = null;
+function getCollections() {
+  const database = getDB();
+  return {
+    usuarios:  database.collection("usuarios"),
+    playlists: database.collection("playlists"),
+    events:    database.collection("events"),
+    queries:   database.collection("queries"),
+    canciones: database.collection("canciones"),
+    artists:   database.collection("artists"),
+    albums:    database.collection("albums"),
+  };
+}
 
 const connectDB = async () => {
   try {
