@@ -1,11 +1,12 @@
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
-const MONGO_URI = process.env.MONGO_URI;
+let db = null;
+const MONGO_URI = (process.env.MONGODB_URI || '').trim();
 const DB_NAME   = process.env.DB_NAME || 'spotifyRAG';
 
 if (!MONGO_URI) {
-  throw new Error('MONGO_URI no definida en .env');
+  throw new Error('MONGODB_URI no definida en .env');
 }
 
 const client = new MongoClient(MONGO_URI, {
@@ -25,37 +26,39 @@ function getCollections() {
     canciones: database.collection("canciones"),
     artists:   database.collection("artists"),
     albums:    database.collection("albums"),
+    chunks:    database.collection("chunks"),
   };
 }
 
 const connectDB = async () => {
   try {
+    if (db) return db;
     await client.connect();
     db = client.db(DB_NAME);
-    console.log('✅ MongoDB conectado');
-    console.log('📦 Base de datos: ' + DB_NAME);
+    console.log('MongoDB conectado');
+    console.log('Base de datos: ' + DB_NAME);
     return db;
   } catch (error) {
-    console.error('❌ Error conectando a MongoDB:', error.message);
+    console.error('Error conectando a MongoDB:', error.message);
     process.exit(1);
   }
 };
 
 const getDB = () => {
-  if (!db) throw new Error('Base de datos no inicializada. Llama connectDB() primero.');
+  if (!db) throw new Error('Base de datos no inicializada.');
   return db;
 };
 
 process.on('SIGINT', async () => {
   await client.close();
-  console.log('🔌 MongoDB cerrado');
+  console.log('MongoDB cerrado');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   await client.close();
-  console.log('🔌 MongoDB cerrado');
+  console.log('MongoDB cerrado');
   process.exit(0);
 });
 
-module.exports = { connectDB, getDB };
+module.exports = { connectDB, getDB, getCollections };

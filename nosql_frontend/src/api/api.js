@@ -49,6 +49,18 @@ export const put = async (url, data) => {
 };
 
 /**
+ * Perform a PATCH request.
+ * 
+ * @param {string} url - The URL to request.
+ * @param {object} data - The data to send in the request body.
+ * @returns {Promise<any>} The response data.
+ */
+export const patch = async (url, data) => {
+  const response = await api.patch(url, data);
+  return response.data;
+};
+
+/**
  * Perform a DELETE request.
  * 
  * @param {string} url - The URL to request.

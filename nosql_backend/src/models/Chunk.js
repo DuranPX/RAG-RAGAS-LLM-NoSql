@@ -1,5 +1,5 @@
 const { ObjectId } = require('mongodb');
-const { getDB } = require('../config/db');
+const { getCollections } = require('../config/db');
 
 const chunkSchema = {
   bsonType: 'object',
@@ -41,7 +41,7 @@ const chunkSchema = {
   }
 };
 
-const getCollection = () => getDB().collection('chunks');
+const getCollection = () => getCollections().chunks;
 
 const ChunkModel = {
   insertOne: async (doc) => {

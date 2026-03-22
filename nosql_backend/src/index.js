@@ -5,6 +5,7 @@ const { connectDB, getDB } = require('./config/db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const routes = require('./routes');
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -40,10 +41,12 @@ connectDB().then(() => {
 
   app.get('/', (req, res) => {
     res.json({
-      mensaje: '🎵 API RAG - Plataforma Musical Inteligente',
+      mensaje: 'API RAG - Plataforma Musical Inteligente',
       endpoints: { health: 'GET /api/health' }
     });
   });
+
+  app.use('/api', routes);
 
   app.use((req, res) => {
     res.status(404).json({ status: 'error', mensaje: 'Ruta no encontrada' });
@@ -55,8 +58,8 @@ connectDB().then(() => {
   });
 
   app.listen(PORT, () => {
-    console.log('🚀 Servidor corriendo en http://localhost:' + PORT);
-    console.log('🏥 Health: http://localhost:' + PORT + '/api/health');
+    console.log('Servidor corriendo en http://localhost:' + PORT);
+    console.log('Health: http://localhost:' + PORT + '/api/health');
   });
 
 }).catch(err => {

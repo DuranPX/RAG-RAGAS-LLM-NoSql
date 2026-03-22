@@ -1,5 +1,5 @@
 const { ObjectId } = require('mongodb');
-const { getDB } = require('../config/db');
+const { getCollections } = require('../config/db');
 
 const songSchema = {
   bsonType: 'object',
@@ -59,7 +59,7 @@ const songSchema = {
   }
 };
 
-const getCollection = () => getDB().collection('canciones');
+const getCollection = () => getCollections().canciones;
 
 const SongModel = {
   insertOne: async (doc) => {
