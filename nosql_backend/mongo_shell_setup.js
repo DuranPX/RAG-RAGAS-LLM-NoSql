@@ -175,7 +175,7 @@ db.events.createIndex(
   { name: "idx_evento_fecha_tipo" }
 );
 
-print("✓ Colección 'events' creada con índices");
+print("Colección 'events' creada con índices");
 
 // ===========================================================
 // 4. COLECCIÓN: queries
