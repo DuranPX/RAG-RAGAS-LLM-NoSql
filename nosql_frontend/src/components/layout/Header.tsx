@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell, FlaskConical } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Bell, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Breadcrumb,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePathname } from 'next/navigation';
+import SearchBar from '@/shared/components/forms/SearchBar';
 
 const Header = () => {
   const pathname = usePathname();
@@ -38,20 +38,14 @@ const Header = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="flex-1 max-w-md relative group">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-purple-400 transition-colors" />
-        <Input 
-          placeholder="Buscar canciones, artistas..." 
-          className="w-full bg-white/5 border-white/10 rounded-full pl-10 text-sm text-white placeholder:text-white/30 focus-visible:ring-purple-500"
-        />
-      </div>
+      <SearchBar className="flex-1 max-w-md" />
 
       {/* Right Actions */}
       <div className="flex-1 flex items-center justify-end gap-4">
         {/* RAGAS Badge */}
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           className="hidden lg:flex items-center gap-2 border-amber-500/50 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 hover:text-amber-300 rounded-full text-xs font-bold animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]"
           onClick={() => console.log('RAGAS Panel Placeholder')}
         >
