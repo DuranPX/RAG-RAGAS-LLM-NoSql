@@ -1,6 +1,3 @@
-// Un evento = usuario escucha canción y experimenta emoción
-// Todo embebido: cancion_snapshot (parcial) + emocion completa
-
 const { getCollections } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
@@ -19,14 +16,6 @@ function validateEvento({ id_usuario, id_cancion, nombre_emocion, tipo_relacion 
 
 class Event {
 
-  // REGISTRAR EVENTO
-  // cancion_snapshot: desnormalización parcial
-  //   → sin letra ni emb_letra (esos viven en colección canciones)
-  //   → con titulo, nombre_artista, nombre_genero, duracion
-  // emocion: totalmente embebida
-  //
-  // Si tipo_relacion = "reproducida" → $inc tiempo_escucha en usuario
-  // Reemplaza: registrar_emocion_usuario_atomico (RPC Supabase)
   static async registrar({
     id_usuario,
     id_cancion,
@@ -37,16 +26,15 @@ class Event {
     const errores = validateEvento({ id_usuario, id_cancion, nombre_emocion, tipo_relacion });
     if (errores.length) throw { status: 400, errores };
 
-    const { events, canciones, usuarios } = getCollections();
+    const { eventos, canciones, usuarios } = getCollections();
 
-    // Solo campos analíticos — letra y emb_letra NO se cargan
     const cancion = await canciones.findOne(
       { _id: new ObjectId(id_cancion) },
       {
         projection: {
           titulo: 1,
-          nombre_artista: 1,
-          nombre_genero: 1,
+          "artista.nombre": 1,
+          genero: 1,
           duracion: 1
         }
       }
@@ -59,8 +47,8 @@ class Event {
       cancion_snapshot: {
         id_cancion: new ObjectId(id_cancion),
         titulo: cancion.titulo,
-        nombre_artista: cancion.nombre_artista,
-        nombre_genero: cancion.nombre_genero || null,
+        nombre_artista: cancion.artista?.nombre || null,
+        nombre_genero: cancion.genero || null,
         duracion: cancion.duracion || null
       },
       emocion: {
@@ -71,7 +59,7 @@ class Event {
       fecha_evento: new Date()
     };
 
-    const result = await events.insertOne(doc);
+    const result = await eventos.insertOne(doc);
 
     if (tipo_relacion === "reproducida" && cancion.duracion) {
       await usuarios.updateOne(
@@ -83,12 +71,10 @@ class Event {
     return { _id: result.insertedId, ...doc };
   }
 
-  // EVENTOS POR USUARIO — con filtro temporal opcional
-  // find directo
   static async findByUsuario(id_usuario, { limit = 50, dias = 30 } = {}) {
-    const { events } = getCollections();
+    const { eventos } = getCollections();
 
-    return events
+    return eventos
       .find({
         id_usuario: new ObjectId(id_usuario),
         fecha_evento: {
@@ -100,11 +86,8 @@ class Event {
       .toArray();
   }
 
-  // EMOCIONES POR CANCIÓN
-  // Aggregation sobre events — emocion.nombre embebido
-  // Reemplaza: obtener_emociones_por_artista_rpc (RPC Supabase)
   static async emocionesPorCancion(id_cancion) {
-    const { events } = getCollections();
+    const { eventos } = getCollections();
 
     const pipeline = [
       {
@@ -128,7 +111,7 @@ class Event {
       }
     ];
 
-    return events.aggregate(pipeline).toArray();
+    return eventos.aggregate(pipeline).toArray();
   }
 }
 

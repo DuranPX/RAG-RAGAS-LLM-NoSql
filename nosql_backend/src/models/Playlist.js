@@ -10,8 +10,6 @@ function validatePlaylist({ titulo, id_usuario }) {
 
 class Playlist {
 
-  // FIND POR USUARIO
-  // find directo — sin $lookup porque portada está embebida
   static async findByUsuario(id_usuario) {
     const { playlists } = getCollections();
     return playlists
@@ -20,15 +18,11 @@ class Playlist {
       .toArray();
   }
 
-  // FIND BY ID
   static async findById(id) {
     const { playlists } = getCollections();
     return playlists.findOne({ _id: new ObjectId(id) });
   }
 
-  // CREATE
-  // portada embebida (URL iTunes) — sin referencia a colección portadas
-  // porque playlists no participan en búsqueda vectorial de imágenes
   static async create({ titulo, descripcion = null, id_usuario, portada = null }) {
     const errores = validatePlaylist({ titulo, id_usuario });
     if (errores.length) throw { status: 400, errores };
@@ -39,8 +33,8 @@ class Playlist {
       titulo,
       descripcion,
       id_usuario: new ObjectId(id_usuario),
-      portada,            
-      canciones: [],      
+      portada,
+      canciones: [],
       fecha_creacion: new Date(),
     };
 
@@ -48,35 +42,30 @@ class Playlist {
     return { _id: result.insertedId, ...doc };
   }
 
-  // AGREGAR CANCIÓN — patrón híbrido
-  // Guarda ObjectId + campos clave desnormalizados (sin letra ni embedding)
-  // Reemplaza: playlist_cancion (tabla N:M en Supabase)
+  // Desnormaliza campos clave de la cancion en el snapshot
   static async addCancion(id_playlist, id_cancion) {
     const { playlists, canciones } = getCollections();
 
-    // Busca la canción para desnormalizar — solo campos de display
-    // La letra y emb_letra NO se cargan aquí
     const cancion = await canciones.findOne(
       { _id: new ObjectId(id_cancion) },
       {
         projection: {
           titulo: 1,
-          nombre_artista: 1,
+          "artista.nombre": 1,
           duracion: 1,
-          "portada.url": 1
+          portada_url: 1
         }
       }
     );
 
     if (!cancion) throw { status: 404, errores: ["Canción no encontrada"] };
 
-    // Snapshot híbrido: referencia + datos de display
     const snapshot = {
       id_cancion: new ObjectId(id_cancion),
       titulo: cancion.titulo,
-      nombre_artista: cancion.nombre_artista,
+      nombre_artista: cancion.artista?.nombre || null,
       duracion: cancion.duracion || null,
-      portada_url: cancion.portada?.url || null  
+      portada_url: cancion.portada_url || null
     };
 
     const result = await playlists.updateOne(
@@ -88,8 +77,6 @@ class Playlist {
     return snapshot;
   }
 
-  // REMOVER CANCIÓN
-  // $pull sobre el array embebido
   static async removeCancion(id_playlist, id_cancion) {
     const { playlists } = getCollections();
 
@@ -102,9 +89,6 @@ class Playlist {
     return { mensaje: "Canción removida" };
   }
 
-  // TOP PLAYLISTS POR CANCIONES
-  // $size sobre array embebido — sin $lookup
-  // Reemplaza: top_playlists_usuario (RPC Supabase)
   static async topPorCanciones(id_usuario, limit = 10) {
     const { playlists } = getCollections();
 

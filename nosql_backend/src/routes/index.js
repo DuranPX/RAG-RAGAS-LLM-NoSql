@@ -1,6 +1,3 @@
-// Las rutas llaman directamente a los modelos
-// La lógica de negocio vive en src/models/
-
 const { Router } = require("express");
 const router = Router();
 
@@ -13,7 +10,6 @@ const Album   = require("../models/Album");
 const { SongModel }  = require("../models/Song");
 const { ChunkModel } = require("../models/Chunk");
 
-// Helper de errores
 const handle = (fn) => async (req, res) => {
   try {
     const data = await fn(req, res);
@@ -54,93 +50,26 @@ router.get("/usuarios/:id/top-artistas", handle(async (req) => {
   return User.topArtistas(req.params.id, limit);
 }));
 
-// PLAYLISTS
-router.get("/playlists/usuario/:id_usuario/top", handle(async (req) => {
-  const limit = parseInt(req.query.limit) || 10;
-  return Playlist.topPorCanciones(req.params.id_usuario, limit);
-}));
-
-router.get("/playlists/usuario/:id_usuario", handle(async (req) => {
-  return Playlist.findByUsuario(req.params.id_usuario);
-}));
-
-router.get("/playlists/:id", handle(async (req) => {
-  const playlist = await Playlist.findById(req.params.id);
-  if (!playlist) throw { status: 404, errores: ["Playlist no encontrada"] };
-  return playlist;
-}));
-
-router.post("/playlists", handle(async (req) => {
-  return Playlist.create(req.body);
-}));
-
-router.post("/playlists/:id/canciones", handle(async (req) => {
-  const snapshot = await Playlist.addCancion(req.params.id, req.body.id_cancion);
-  return { mensaje: "Canción agregada", snapshot };
-}));
-
-router.delete("/playlists/:id/canciones/:id_cancion", handle(async (req) => {
-  return Playlist.removeCancion(req.params.id, req.params.id_cancion);
-}));
-
-// EVENTS
-router.post("/events", handle(async (req) => {
-  return Event.registrar(req.body);
-}));
-
-router.get("/events/usuario/:id_usuario", handle(async (req) => {
-  const limit = parseInt(req.query.limit) || 50;
-  const dias = parseInt(req.query.dias) || 30;
-  return Event.findByUsuario(req.params.id_usuario, { limit, dias });
-}));
-
-router.get("/events/cancion/:id_cancion/emociones", handle(async (req) => {
-  return Event.emocionesPorCancion(req.params.id_cancion);
-}));
-
-// QUERIES
-router.get("/queries/usuario/:id_usuario", handle(async (req) => {
-  const limit = parseInt(req.query.limit) || 50;
-  return Query.historialPorUsuario(req.params.id_usuario, limit);
-}));
-
-router.post("/queries", handle(async (req) => {
-  return Query.create(req.body);
-}));
-
-router.patch("/queries/:id/respuesta-llm", handle(async (req) => {
-  return Query.guardarRespuesta(req.params.id, req.body);
-}));
-
-router.get("/queries/:id", handle(async (req) => {
-  const query = await Query.findById(req.params.id);
-  if (!query) throw { status: 404, errores: ["Consulta no encontrada"] };
-  return query;
-}));
-
-// HEALTH
-router.get("/health", (_, res) => res.json({ status: "ok" }));
-
-// ARTISTS
-router.get("/artists", handle(async () => {
+// ARTISTAS
+router.get("/artistas", handle(async () => {
   return Artist.findAll();
 }));
 
-router.get("/artists/:id", handle(async (req) => {
+router.get("/artistas/:id", handle(async (req) => {
   const artist = await Artist.findById(req.params.id);
-  if (!artist) throw { status: 404, errores: ["Artist no encontrado"] };
+  if (!artist) throw { status: 404, errores: ["Artista no encontrado"] };
   return artist;
 }));
 
-router.post("/artists", handle(async (req) => {
+router.post("/artistas", handle(async (req) => {
   return Artist.create(req.body);
 }));
 
-router.put("/artists/:id", handle(async (req) => {
+router.put("/artistas/:id", handle(async (req) => {
   return Artist.update(req.params.id, req.body);
 }));
 
-router.delete("/artists/:id", handle(async (req) => {
+router.delete("/artistas/:id", handle(async (req) => {
   return Artist.delete(req.params.id);
 }));
 
@@ -200,6 +129,70 @@ router.post("/canciones/vector-search", handle(async (req) => {
   return SongModel.vectorSearch(queryVector, limit);
 }));
 
+// PLAYLISTS
+router.get("/playlists/usuario/:id_usuario/top", handle(async (req) => {
+  const limit = parseInt(req.query.limit) || 10;
+  return Playlist.topPorCanciones(req.params.id_usuario, limit);
+}));
+
+router.get("/playlists/usuario/:id_usuario", handle(async (req) => {
+  return Playlist.findByUsuario(req.params.id_usuario);
+}));
+
+router.get("/playlists/:id", handle(async (req) => {
+  const playlist = await Playlist.findById(req.params.id);
+  if (!playlist) throw { status: 404, errores: ["Playlist no encontrada"] };
+  return playlist;
+}));
+
+router.post("/playlists", handle(async (req) => {
+  return Playlist.create(req.body);
+}));
+
+router.post("/playlists/:id/canciones", handle(async (req) => {
+  const snapshot = await Playlist.addCancion(req.params.id, req.body.id_cancion);
+  return { mensaje: "Canción agregada", snapshot };
+}));
+
+router.delete("/playlists/:id/canciones/:id_cancion", handle(async (req) => {
+  return Playlist.removeCancion(req.params.id, req.params.id_cancion);
+}));
+
+// EVENTOS
+router.post("/eventos", handle(async (req) => {
+  return Event.registrar(req.body);
+}));
+
+router.get("/eventos/usuario/:id_usuario", handle(async (req) => {
+  const limit = parseInt(req.query.limit) || 50;
+  const dias = parseInt(req.query.dias) || 30;
+  return Event.findByUsuario(req.params.id_usuario, { limit, dias });
+}));
+
+router.get("/eventos/cancion/:id_cancion/emociones", handle(async (req) => {
+  return Event.emocionesPorCancion(req.params.id_cancion);
+}));
+
+// CONSULTAS
+router.get("/consultas/usuario/:id_usuario", handle(async (req) => {
+  const limit = parseInt(req.query.limit) || 50;
+  return Query.historialPorUsuario(req.params.id_usuario, limit);
+}));
+
+router.post("/consultas", handle(async (req) => {
+  return Query.create(req.body);
+}));
+
+router.patch("/consultas/:id/respuesta-llm", handle(async (req) => {
+  return Query.guardarRespuesta(req.params.id, req.body);
+}));
+
+router.get("/consultas/:id", handle(async (req) => {
+  const query = await Query.findById(req.params.id);
+  if (!query) throw { status: 404, errores: ["Consulta no encontrada"] };
+  return query;
+}));
+
 // CHUNKS
 router.get("/chunks/documento/:doc_id", handle(async (req) => {
   return ChunkModel.findByDocId(req.params.doc_id);
@@ -217,9 +210,8 @@ router.post("/chunks/vector-search", handle(async (req) => {
 
 // SEARCH
 router.post("/search", handle(async (req) => {
-
   const { texto, anio, pais, genero } = req.body;
-  const { albums, artists } = require("../config/db").getCollections();
+  const { albums, artistas } = require("../config/db").getCollections();
 
   let artistFilter = {};
   let albumFilter  = {};
@@ -228,10 +220,10 @@ router.post("/search", handle(async (req) => {
   if (genero) artistFilter.generos = { $regex: genero, $options: "i" };
   if (texto) artistFilter.nombre = { $regex: texto, $options: "i" };
 
-  const artistsRes = await artists.find(artistFilter).toArray();
+  const artistsRes = await artistas.find(artistFilter).toArray();
   const artistIds = artistsRes.map(a => a._id);
 
-  if (anio) albumFilter.anio = Number(anio);
+  if (anio) albumFilter.anio_lanzamiento = Number(anio);
   if (texto) albumFilter.titulo = { $regex: texto, $options: "i" };
 
   if (artistIds.length > 0) {
@@ -241,7 +233,7 @@ router.post("/search", handle(async (req) => {
   const albumsRes = await albums.find(albumFilter).toArray();
   const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
 
-  const extraArtists = await artists.find({
+  const extraArtists = await artistas.find({
     _id: { $in: artistIdsFromAlbums }
   }).toArray();
 
@@ -254,8 +246,11 @@ router.post("/search", handle(async (req) => {
 
   return {
     albums: albumsRes,
-    artists: allArtists
+    artistas: allArtists
   };
 }));
+
+// HEALTH
+router.get("/health", (_, res) => res.json({ status: "ok" }));
 
 module.exports = router;
