@@ -19,14 +19,17 @@ const client = new MongoClient(MONGO_URI, {
 function getCollections() {
   const database = getDB();
   return {
-    usuarios:  database.collection("usuarios"),
-    playlists: database.collection("playlists"),
-    events:    database.collection("events"),
-    queries:   database.collection("queries"),
-    canciones: database.collection("canciones"),
-    artists:   database.collection("artists"),
-    albums:    database.collection("albums"),
-    chunks:    database.collection("chunks"),
+    usuarios:     database.collection("usuarios"),
+    artistas:     database.collection("artistas"),
+    albums:       database.collection("albums"),
+    generos:      database.collection("generos"),
+    canciones:    database.collection("canciones"),
+    playlists:    database.collection("playlists"),
+    eventos:      database.collection("eventos"),
+    consultas:    database.collection("consultas"),
+    resenas:      database.collection("resenas"),
+    chunks:       database.collection("chunks"),
+    evaluaciones: database.collection("evaluaciones"),
   };
 }
 

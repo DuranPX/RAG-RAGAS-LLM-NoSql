@@ -3,15 +3,8 @@ const { ObjectId } = require("mongodb");
 
 function validateAlbum({ titulo, id_artista }) {
   const errores = [];
-
-  if (!titulo || typeof titulo !== "string") {
-    errores.push("titulo requerido");
-  }
-
-  if (!id_artista) {
-    errores.push("id_artista requerido");
-  }
-
+  if (!titulo || typeof titulo !== "string") errores.push("titulo requerido");
+  if (!id_artista) errores.push("id_artista requerido");
   return errores;
 }
 
@@ -27,18 +20,15 @@ class Album {
     return albums.findOne({ _id: new ObjectId(id) });
   }
 
-  // CREATE
   static async create({ titulo, anio, id_artista, portada = null, idioma = "es" }) {
-
     if (!titulo) throw { status: 400, errores: ["titulo requerido"] };
     if (!id_artista) throw { status: 400, errores: ["id_artista requerido"] };
 
-    const { albums, artists } = getCollections();
+    const { albums, artistas } = getCollections();
 
-    // VALIDAR QUE EL ARTISTA EXISTE
     let artista;
     try {
-      artista = await artists.findOne({ _id: new ObjectId(id_artista) });
+      artista = await artistas.findOne({ _id: new ObjectId(id_artista) });
     } catch {
       throw { status: 400, errores: ["id_artista inválido"] };
     }
@@ -47,7 +37,6 @@ class Album {
       throw { status: 404, errores: ["El artista no existe"] };
     }
 
-    // CREAR DOCUMENTO
     const doc = {
       titulo,
       anio: anio ? Number(anio) : null,
@@ -58,7 +47,6 @@ class Album {
     };
 
     const result = await albums.insertOne(doc);
-
     return { _id: result.insertedId, ...doc };
   }
 

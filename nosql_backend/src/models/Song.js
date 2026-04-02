@@ -30,11 +30,11 @@ const songSchema = {
     },
     artista: {
       bsonType: 'object',
-      required: ['id_artista', 'nombre'],
+      required: ['_id', 'nombre', 'pais'],
       properties: {
-        id_artista: { bsonType: 'objectId' },
-        nombre:     { bsonType: 'string' },
-        pais:       { bsonType: 'string' }
+        _id:    { bsonType: 'objectId' },
+        nombre: { bsonType: 'string' },
+        pais:   { bsonType: 'string' }
       }
     },
     id_artista: {
@@ -42,11 +42,11 @@ const songSchema = {
     },
     album: {
       bsonType: 'object',
-      required: ['id_album', 'titulo'],
+      required: ['_id', 'titulo', 'anio'],
       properties: {
-        id_album: { bsonType: 'objectId' },
-        titulo:   { bsonType: 'string' },
-        anio:     { bsonType: 'int', minimum: 1900 }
+        _id:    { bsonType: 'objectId' },
+        titulo: { bsonType: 'string' },
+        anio:   { bsonType: 'int', minimum: 1900 }
       }
     },
     id_album: {
