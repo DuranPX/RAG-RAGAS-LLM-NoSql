@@ -1,29 +1,20 @@
-const { MongoClient } = require("mongodb");
+require('dotenv').config();
+const { MongoClient } = require('mongodb');
 
-const URI = process.env.MONGODB_URI;
-const DB_NAME = "spotifyRAG";
+let db = null;
+const MONGO_URI = (process.env.MONGODB_URI || '').trim();
+const DB_NAME   = process.env.DB_NAME || 'spotifyRAG';
 
-let client;
-let db;
-
-async function connectDB() {
-  if (db) return db;
-
-  client = new MongoClient(URI, {
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-  });
-
-  await client.connect();
-  db = client.db(DB_NAME);
-  console.log(`MongoDB conectado a (debe coincidir, debug) ${DB_NAME}`);
-  return db;
+if (!MONGO_URI) {
+  throw new Error('MONGODB_URI no definida en .env');
 }
 
-function getDB() {
-  if (!db) throw new Error("DB no inicializada");
-  return db;
-}
+const client = new MongoClient(MONGO_URI, {
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000
+});
 
 function getCollections() {
   const database = getDB();
@@ -35,14 +26,39 @@ function getCollections() {
     canciones: database.collection("canciones"),
     artists:   database.collection("artists"),
     albums:    database.collection("albums"),
+    chunks:    database.collection("chunks"),
   };
 }
 
-async function closeDB() {
-  if (client) {
-    await client.close();
-    console.log("MongoDB desconectado");
+const connectDB = async () => {
+  try {
+    if (db) return db;
+    await client.connect();
+    db = client.db(DB_NAME);
+    console.log('MongoDB conectado');
+    console.log('Base de datos: ' + DB_NAME);
+    return db;
+  } catch (error) {
+    console.error('Error conectando a MongoDB:', error.message);
+    process.exit(1);
   }
-}
+};
 
-module.exports = { connectDB, getDB, getCollections, closeDB };
+const getDB = () => {
+  if (!db) throw new Error('Base de datos no inicializada.');
+  return db;
+};
+
+process.on('SIGINT', async () => {
+  await client.close();
+  console.log('MongoDB cerrado');
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await client.close();
+  console.log('MongoDB cerrado');
+  process.exit(0);
+});
+
+module.exports = { connectDB, getDB, getCollections };
