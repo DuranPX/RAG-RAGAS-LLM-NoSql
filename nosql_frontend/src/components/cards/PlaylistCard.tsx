@@ -15,9 +15,10 @@ interface PlaylistCardProps {
   songCount: number;
   owner: string;
   coverUrl?: string;
+  songCovers?: string[];
 }
 
-const PlaylistCard: React.FC<PlaylistCardProps> = ({ id, title, description, songCount, owner, coverUrl }) => {
+const PlaylistCard: React.FC<PlaylistCardProps> = ({ id, title, description, songCount, owner, coverUrl, songCovers }) => {
   return (
     <Card className="group bg-white/5 border-white/10 rounded-xl overflow-hidden hover:bg-white/10 transition-all duration-300">
       <Link href={`/playlists/${id}`}>
@@ -26,12 +27,19 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ id, title, description, son
           <div className="relative aspect-video w-full overflow-hidden">
             {coverUrl ? (
               <img src={coverUrl} alt={title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            ) : songCovers && songCovers.length > 0 ? (
+              <div className="w-full h-full flex">
+                {songCovers.slice(0, 2).map((src, i) => (
+                  <div key={i} className="flex-1 overflow-hidden">
+                    <img src={src} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center">
                 <Music className="text-white/40 h-16 w-16" />
               </div>
             )}
-            {/* TODO: image placeholder */}
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
           </div>
 

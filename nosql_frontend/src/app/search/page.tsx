@@ -85,6 +85,7 @@ export default function SearchPage() {
                     genre={song.genero || ''}
                     duration={formatDuration(song.duracion)}
                     plays={song.emociones?.[0] || ''}
+                    coverUrl={song.portada_url}
                   />
                 </Link>
               ))}
