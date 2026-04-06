@@ -249,9 +249,11 @@ db.createCollection("consultas", {
       bsonType: "object",
       required: ["id_usuario", "texto_pregunta", "fecha"],
       properties: {
-        id_usuario: { bsonType: "objectId" },
+        id_usuario: { bsonType: ["objectId", "null"] },
         texto_pregunta: { bsonType: "string" },
         fecha: { bsonType: "date" },
+        tipo_consulta: { bsonType: ["string", "null"], enum: ["texto-texto", "imagen-texto", "hibrido", null] },
+        tiene_imagen: { bsonType: ["bool", "null"] },
         vector_embedding: { bsonType: ["array", "null"] },
         modelo_embedding: { bsonType: ["string", "null"] },
         resultados: {
@@ -261,8 +263,10 @@ db.createCollection("consultas", {
             properties: {
               id_cancion: { bsonType: ["objectId", "null"] },
               id_artista: { bsonType: ["objectId", "null"] },
+              id_album: { bsonType: ["objectId", "null"] },
               titulo: { bsonType: ["string", "null"] },
               nombre_artista: { bsonType: ["string", "null"] },
+              tipo_fuente: { bsonType: ["string", "null"] },
               score_similitud: { bsonType: ["double", "null"] }
             }
           }
@@ -374,11 +378,82 @@ db.createCollection("evaluaciones", {
 db.evaluaciones.createIndex({ id_consulta: 1 }, { name: "idx_evaluacion_consulta" });
 db.evaluaciones.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluacion_fecha" });
 
-// Indices vectoriales (crear desde Atlas UI):
-//
-// canciones.emb_letra       → vector(384), cosine, nombre: vector_idx_emb_letra
-// chunks.embedding          → vector(384), cosine, nombre: vector_idx_embedding_chunks
-// albums.portada.emb_imagen → vector(512), cosine, nombre: vector_idx_portada_imagen
+// ====== Índices Vectoriales (Atlas Search) ======
+print("\n--- Solicitando creación de Índices de Vector Search en Atlas ---");
+try {
+  db.runCommand({
+    createSearchIndexes: "canciones",
+    indexes: [
+      {
+        name: "vector_idx_emb_letra",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "emb_letra",
+              numDimensions: 384,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_emb_letra (canciones)");
+} catch(e) {
+  print("X Error vector_idx_emb_letra:", e.message);
+}
+
+try {
+  db.runCommand({
+    createSearchIndexes: "chunks",
+    indexes: [
+      {
+        name: "vector_idx_embedding_chunks",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "embedding",
+              numDimensions: 384,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_embedding_chunks (chunks)");
+} catch(e) {
+  print("X Error vector_idx_embedding_chunks:", e.message);
+}
+
+try {
+  db.runCommand({
+    createSearchIndexes: "albums",
+    indexes: [
+      {
+        name: "vector_idx_portada_imagen",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "portada.emb_imagen",
+              numDimensions: 512,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_portada_imagen (albums)");
+} catch(e) {
+  print("X Error vector_idx_portada_imagen:", e.message);
+}
 
 // Aggregations de referencia
 const historialConsultasUsuario = (id_usuario_str) => [

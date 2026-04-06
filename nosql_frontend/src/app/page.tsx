@@ -57,8 +57,8 @@ export default function LandingPage() {
         </h1>
 
         {/* Subheading */}
-        <p className="text-lg md:text-xl text-white/70 mb-12 max-w-2xl font-light leading-relaxed">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.
+        <p className="text-white/60 mb-8 max-w-lg mx-auto text-sm">
+          Ingresa a la plataforma para analizar la música, tus métricas, estadísticas, y realizar pruebas de búsqueda RAG y IA sin fricciones.
         </p>
 
         {/* CTA Buttons */}

@@ -255,7 +255,8 @@ Agregar variable de entorno en Vercel: `NEXT_PUBLIC_API_URL=https://tu-backend.o
     │       │   ├── artists.routes.js
     │       │   ├── playlists.routes.js
     │       │   ├── search.routes.js     # POST /search
-    │       │   └── rag.routes.js        # POST /rag
+    │       │   ├── rag.routes.js        # POST /rag
+    │       │   └── usuarios.routes.js   # GET /usuarios/stats (Métricas de la comunidad, planes, tiempo de escucha)
     │       ├── controllers/
     │       │   ├── songs.controller.js
     │       │   ├── artists.controller.js
