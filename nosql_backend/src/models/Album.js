@@ -78,6 +78,29 @@ class Album {
 
     return { message: "Album eliminado" };
   }
+
+  static async vectorSearch(queryVector, limit = 5) {
+    const { albums } = getCollections();
+    return albums.aggregate([
+      {
+        $vectorSearch: {
+          index: 'vector_idx_portada_imagen',
+          path: 'portada.emb_imagen',
+          queryVector,
+          numCandidates: limit * 10,
+          limit
+        }
+      },
+      {
+        $project: {
+          titulo: 1,
+          portada: 1,
+          id_artista: 1,
+          score: { $meta: 'vectorSearchScore' }
+        }
+      }
+    ]).toArray();
+  }
 }
 
 module.exports = Album;

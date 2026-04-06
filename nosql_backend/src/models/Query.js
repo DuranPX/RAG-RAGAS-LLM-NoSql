@@ -1,9 +1,8 @@
 const { getCollections } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
-function validateQuery({ id_usuario, texto_pregunta }) {
+function validateQuery({ texto_pregunta }) {
   const errores = [];
-  if (!id_usuario) errores.push("id_usuario requerido");
   if (!texto_pregunta || typeof texto_pregunta !== "string") {
     errores.push("texto_pregunta requerido");
   }
@@ -13,21 +12,34 @@ function validateQuery({ id_usuario, texto_pregunta }) {
 class Query {
 
   static async create({
-    id_usuario,
+    id_usuario = null,
     texto_pregunta,
     vector_embedding = null,
     modelo_embedding = "all-MiniLM-L6-v2",
+    tipo_consulta = "texto-texto",
+    tiene_imagen = false,
     resultados = []
   }) {
-    const errores = validateQuery({ id_usuario, texto_pregunta });
+    const errores = validateQuery({ texto_pregunta });
     if (errores.length) throw { status: 400, errores };
 
-    const { consultas } = getCollections();
+    const { consultas, usuarios } = getCollections();
+
+    // Lógica para usuario estático: si no pasan ID, asignamos el primero que encontremos
+    let finalUserId = id_usuario;
+    if (!finalUserId) {
+      const mockUser = await usuarios.findOne({});
+      if (mockUser) finalUserId = mockUser._id;
+    } else {
+      finalUserId = new ObjectId(id_usuario);
+    }
 
     const doc = {
-      id_usuario: new ObjectId(id_usuario),
+      id_usuario: finalUserId,
       texto_pregunta,
       fecha: new Date(),
+      tipo_consulta,
+      tiene_imagen,
       vector_embedding,
       modelo_embedding,
       resultados,
@@ -45,7 +57,7 @@ class Query {
       texto,
       modelo_usado,
       fecha_generacion: new Date(),
-      chunks_usados: chunks_usados.map(id => new ObjectId(id))
+      chunks_usados: chunks_usados.map(cid => new ObjectId(cid))
     };
 
     const result = await consultas.findOneAndUpdate(

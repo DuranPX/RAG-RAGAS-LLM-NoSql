@@ -9,6 +9,7 @@ const Artist  = require("../models/Artist");
 const Album   = require("../models/Album");
 const { SongModel }  = require("../models/Song");
 const { ChunkModel } = require("../models/Chunk");
+const ragRoutes = require("./rag");
 
 const handle = (fn) => async (req, res) => {
   try {
@@ -22,6 +23,10 @@ const handle = (fn) => async (req, res) => {
 };
 
 // USUARIOS
+router.get("/usuarios/stats", handle(async () => {
+  return User.getStats();
+}));
+
 router.get("/usuarios", handle(async () => {
   return User.findAll();
 }));
@@ -252,5 +257,7 @@ router.post("/search", handle(async (req) => {
 
 // HEALTH
 router.get("/health", (_, res) => res.json({ status: "ok" }));
+
+router.use("/rag", ragRoutes);
 
 module.exports = router;
