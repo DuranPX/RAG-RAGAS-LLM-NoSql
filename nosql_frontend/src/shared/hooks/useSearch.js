@@ -12,14 +12,14 @@ export const useSearch = () => {
   const [isLoading, setLoading] = useState(false);
   const [error, setError]       = useState(null);
 
-  const search = useCallback(async (searchQuery) => {
+  const search = useCallback(async (searchQuery, filters = {}) => {
     if (!searchQuery?.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const data = await searchService.search({ query: searchQuery });
+      const data = await searchService.search({ query: searchQuery, ...filters });
       setResults(data);
     } catch (err) {
       setError(err.message || 'Error al buscar');
