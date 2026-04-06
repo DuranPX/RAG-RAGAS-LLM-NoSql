@@ -1,42 +1,79 @@
 
 use("spotifyRAG");
 
-// 1. COLECCIÓN: usuarios
-// Portada embebida (URL iTunes), plan y tiempo_escucha
+// 1. usuarios
 db.createCollection("usuarios", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
       required: ["nombre", "correo", "plan_suscripcion"],
       properties: {
-        nombre: {
-          bsonType: "string",
-          description: "Nombre del usuario — requerido"
-        },
-        correo: {
-          bsonType: "string",
-          pattern: "^[^@]+@[^@]+\\.[^@]+$", // aqui aplicamos regex de una vez
-          description: "Correo válido — requerido y único"
-        },
-        plan_suscripcion: {
-          bsonType: "string",
-          enum: ["free", "premium", "family"], //mantenemos el valor agregado del semestre pasado
-          description: "Plan de suscripción"
-        },
-        tiempo_escucha: {
-          bsonType: ["double", "int", "null"],
-          minimum: 0,
-          description: "Minutos totales escuchados"
-        },
+        nombre: { bsonType: "string" },
+        correo: { bsonType: "string", pattern: "^[^@]+@[^@]+\\.[^@]+$" },
+        plan_suscripcion: { bsonType: "string", enum: ["free", "premium", "family"] },
+        tiempo_escucha: { bsonType: ["double", "int", "null"], minimum: 0 },
         portada: {
           bsonType: ["object", "null"],
           properties: {
-            url: { bsonType: "string" },        // URL de iTunes API, igual que el semestre pasado, solo que ahora lo metemos en la coleccion de usuarios y aun toca mira
+            url: { bsonType: "string" },
             descripcion: { bsonType: "string" }
           }
         },
-        fecha_registro: {
-          bsonType: "date"
+        historial_reciente: { bsonType: "array" },
+        fecha_registro: { bsonType: "date" }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.usuarios.createIndex({ correo: 1 }, { unique: true, name: "idx_correo_unico" });
+db.usuarios.createIndex({ plan_suscripcion: 1 }, { name: "idx_plan" });
+db.usuarios.createIndex({ fecha_registro: -1 }, { name: "idx_fecha_registro" });
+
+// 2. artistas
+db.createCollection("artistas", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["nombre"],
+      properties: {
+        nombre: { bsonType: "string" },
+        pais: { bsonType: ["string", "null"] },
+        descripcion: { bsonType: ["string", "null"] },
+        generos: { bsonType: "array", items: { bsonType: "string" } },
+        emb_descripcion: { bsonType: ["array", "null"] },
+        fecha_formacion: { bsonType: ["date", "null"] }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.artistas.createIndex({ nombre: 1 }, { name: "idx_artista_nombre" });
+db.artistas.createIndex({ generos: 1 }, { name: "idx_artista_generos" });
+db.artistas.createIndex({ pais: 1 }, { name: "idx_artista_pais" });
+
+// 3. albums
+db.createCollection("albums", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["titulo", "id_artista"],
+      properties: {
+        titulo: { bsonType: "string" },
+        id_artista: { bsonType: "objectId" },
+        anio_lanzamiento: { bsonType: ["int", "null"] },
+        tipo: { bsonType: ["string", "null"] },
+        portada: {
+          bsonType: ["object", "null"],
+          properties: {
+            url: { bsonType: "string" },
+            descripcion: { bsonType: ["string", "null"] },
+            emb_imagen: { bsonType: ["array", "null"] }
+          }
         }
       }
     }
@@ -45,33 +82,91 @@ db.createCollection("usuarios", {
   validationAction: "warn"
 });
 
-// Índices para usuarios
-db.usuarios.createIndex({ correo: 1 }, { unique: true, name: "idx_correo_unico" });
-db.usuarios.createIndex({ plan_suscripcion: 1 }, { name: "idx_plan" });
-db.usuarios.createIndex({ fecha_registro: -1 }, { name: "idx_fecha_registro" });
+db.albums.createIndex({ id_artista: 1 }, { name: "idx_album_artista" });
+db.albums.createIndex({ anio_lanzamiento: -1 }, { name: "idx_album_anio" });
+db.albums.createIndex({ titulo: "text" }, { name: "idx_album_texto" });
 
-print("Colección 'usuarios' creada con índices");
+// 4. generos
+db.createCollection("generos", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["nombre"],
+      properties: {
+        nombre: { bsonType: "string" },
+        descripcion: { bsonType: ["string", "null"] }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
 
-// 2. COLECCIÓN: playlists
-// Canciones: híbrido — ObjectId + campos clave desnormalizados y sobre la portada, 
-// esta embebida con URL iTunes, pero toco hacer un fix y agregarle el embedding despues de crearlo con el micro de python
+db.generos.createIndex({ nombre: 1 }, { unique: true, name: "idx_genero_nombre_unico" });
+
+// 5. canciones
+db.createCollection("canciones", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["titulo", "letra", "emb_letra", "duracion", "genero", "artista", "album"],
+      properties: {
+        titulo: { bsonType: "string", maxLength: 150 },
+        letra: { bsonType: "string" },
+        emb_letra: {
+          bsonType: "array",
+          minItems: 384, maxItems: 384,
+          items: { bsonType: "double" }
+        },
+        duracion: { bsonType: "number", minimum: 1 },
+        genero: { bsonType: "string" },
+        id_genero: { bsonType: ["objectId", "null"] },
+        idioma: { bsonType: ["string", "null"] },
+        emociones: { bsonType: "array", items: { bsonType: "string" } },
+        artista: {
+          bsonType: "object",
+          required: ["_id", "nombre", "pais"],
+          properties: {
+            _id: { bsonType: "objectId" },
+            nombre: { bsonType: "string" },
+            pais: { bsonType: "string" }
+          }
+        },
+        id_artista: { bsonType: "objectId" },
+        album: {
+          bsonType: "object",
+          required: ["_id", "titulo", "anio"],
+          properties: {
+            _id: { bsonType: "objectId" },
+            titulo: { bsonType: "string" },
+            anio: { bsonType: "int", minimum: 1900 }
+          }
+        },
+        id_album: { bsonType: "objectId" }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.canciones.createIndex({ genero: 1 }, { name: "idx_cancion_genero" });
+db.canciones.createIndex({ id_artista: 1 }, { name: "idx_cancion_artista" });
+db.canciones.createIndex({ id_album: 1 }, { name: "idx_cancion_album" });
+db.canciones.createIndex({ titulo: "text", letra: "text" }, { name: "idx_cancion_texto" });
+db.canciones.createIndex({ "artista.nombre": 1 }, { name: "idx_cancion_nombre_artista" });
+
+// 6. playlists
 db.createCollection("playlists", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
       required: ["titulo", "id_usuario"],
       properties: {
-        titulo: {
-          bsonType: "string",
-          description: "Título de la playlist — requerido"
-        },
-        descripcion: {
-          bsonType: ["string", "null"]
-        },
-        id_usuario: {
-          bsonType: "objectId",
-          description: "Referencia al usuario dueño"
-        },
+        titulo: { bsonType: "string" },
+        descripcion: { bsonType: ["string", "null"] },
+        id_usuario: { bsonType: "objectId" },
+        visibilidad: { bsonType: ["string", "null"], enum: ["public", "private", null] },
         portada: {
           bsonType: ["object", "null"],
           properties: {
@@ -80,8 +175,6 @@ db.createCollection("playlists", {
           }
         },
         canciones: {
-          // Array híbrido: ObjectId + campos clave desnormalizados
-          // No embebí letra ni embedding, solo lo que muestra la UI
           bsonType: "array",
           items: {
             bsonType: "object",
@@ -95,9 +188,7 @@ db.createCollection("playlists", {
             }
           }
         },
-        fecha_creacion: {
-          bsonType: "date"
-        }
+        fecha_creacion: { bsonType: "date" }
       }
     }
   },
@@ -105,29 +196,19 @@ db.createCollection("playlists", {
   validationAction: "warn"
 });
 
-// Índices para playlists
 db.playlists.createIndex({ id_usuario: 1 }, { name: "idx_playlist_usuario" });
 db.playlists.createIndex({ id_usuario: 1, fecha_creacion: -1 }, { name: "idx_playlist_usuario_fecha" });
 db.playlists.createIndex({ titulo: "text" }, { name: "idx_playlist_texto" });
 
-print("✓ Colección 'playlists' creada con índices");
-
-// 3. COLECCIÓN: events
-// Un documento = un evento de escucha con emoción
-// Todo embebido: cancion_snapshot + emocion. cancion_snapshot: desnormalización parcial (sin letra ni embedding)
-db.createCollection("events", {
+// 7. eventos
+db.createCollection("eventos", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
       required: ["id_usuario", "cancion_snapshot", "emocion", "tipo_relacion"],
       properties: {
-        id_usuario: {
-          bsonType: "objectId",
-          description: "Referencia al usuario"
-        },
+        id_usuario: { bsonType: "objectId" },
         cancion_snapshot: {
-          // Desnormalización parcial — campos para analítica y RAG
-          // La letra y emb_letra viven en colección 'canciones'
           bsonType: "object",
           required: ["id_cancion", "titulo", "nombre_artista"],
           properties: {
@@ -139,7 +220,6 @@ db.createCollection("events", {
           }
         },
         emocion: {
-          // Totalmente embebida — sin lookup en consultas
           bsonType: "object",
           required: ["nombre"],
           properties: {
@@ -147,13 +227,8 @@ db.createCollection("events", {
             descripcion: { bsonType: ["string", "null"] }
           }
         },
-        tipo_relacion: {
-          bsonType: "string",
-          enum: ["favorita", "reproducida", "buscada"]
-        },
-        fecha_evento: {
-          bsonType: "date"
-        }
+        tipo_relacion: { bsonType: "string", enum: ["favorita", "reproducida", "buscada"] },
+        fecha_evento: { bsonType: "date" }
       }
     }
   },
@@ -161,53 +236,26 @@ db.createCollection("events", {
   validationAction: "warn"
 });
 
-// Índices para events
-db.events.createIndex({ id_usuario: 1, fecha_evento: -1 }, { name: "idx_evento_usuario_fecha" });
-db.events.createIndex({ "cancion_snapshot.id_cancion": 1 }, { name: "idx_evento_cancion" });
-db.events.createIndex({ "emocion.nombre": 1 }, { name: "idx_evento_emocion" });
-db.events.createIndex(
-  { id_usuario: 1, "cancion_snapshot.nombre_artista": 1 },
-  { name: "idx_evento_usuario_artista" }
-);
-// Índice compuesto fecha + tipo para análisis temporal
-db.events.createIndex(
-  { fecha_evento: 1, tipo_relacion: 1 },
-  { name: "idx_evento_fecha_tipo" }
-);
+db.eventos.createIndex({ id_usuario: 1, fecha_evento: -1 }, { name: "idx_evento_usuario_fecha" });
+db.eventos.createIndex({ "cancion_snapshot.id_cancion": 1 }, { name: "idx_evento_cancion" });
+db.eventos.createIndex({ "emocion.nombre": 1 }, { name: "idx_evento_emocion" });
+db.eventos.createIndex({ id_usuario: 1, "cancion_snapshot.nombre_artista": 1 }, { name: "idx_evento_usuario_artista" });
+db.eventos.createIndex({ fecha_evento: 1, tipo_relacion: 1 }, { name: "idx_evento_fecha_tipo" });
 
-print("Colección 'events' creada con índices");
-
-// ===========================================================
-// 4. COLECCIÓN: queries
-// Colapsa consulta + query_embedding + resultados en un doc
-// respuesta_llm embebida como caché semántico
-// ===========================================================
-db.createCollection("queries", {
+// 8. consultas
+db.createCollection("consultas", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
       required: ["id_usuario", "texto_pregunta", "fecha"],
       properties: {
-        id_usuario: {
-          bsonType: "objectId"
-        },
-        texto_pregunta: {
-          bsonType: "string",
-          description: "Texto de la consulta — requerido"
-        },
-        fecha: {
-          bsonType: "date"
-        },
-        // El vector de la consulta — generado por el microservicio Python
-        vector_embedding: {
-          bsonType: ["array", "null"],
-          description: "Vector float[384] generado por all-MiniLM-L6-v2"
-        },
-        modelo_embedding: {
-          bsonType: ["string", "null"]
-          // Ejemplo: "all-MiniLM-L6-v2"
-        },
-        // Resultados embebidos — score de similitud incluido
+        id_usuario: { bsonType: ["objectId", "null"] },
+        texto_pregunta: { bsonType: "string" },
+        fecha: { bsonType: "date" },
+        tipo_consulta: { bsonType: ["string", "null"], enum: ["texto-texto", "imagen-texto", "hibrido", null] },
+        tiene_imagen: { bsonType: ["bool", "null"] },
+        vector_embedding: { bsonType: ["array", "null"] },
+        modelo_embedding: { bsonType: ["string", "null"] },
         resultados: {
           bsonType: "array",
           items: {
@@ -215,24 +263,21 @@ db.createCollection("queries", {
             properties: {
               id_cancion: { bsonType: ["objectId", "null"] },
               id_artista: { bsonType: ["objectId", "null"] },
+              id_album: { bsonType: ["objectId", "null"] },
               titulo: { bsonType: ["string", "null"] },
               nombre_artista: { bsonType: ["string", "null"] },
+              tipo_fuente: { bsonType: ["string", "null"] },
               score_similitud: { bsonType: ["double", "null"] }
             }
           }
         },
-        // Respuesta del LLM — caché semántico + contexto para RAGAS
         respuesta_llm: {
           bsonType: ["object", "null"],
           properties: {
             texto: { bsonType: "string" },
-            modelo_usado: { bsonType: "string" },  // "llama-3.1", "mixtral", etc.
+            modelo_usado: { bsonType: "string" },
             fecha_generacion: { bsonType: "date" },
-            chunks_usados: {
-              // Referencias a los chunks de 'canciones' que usó el LLM
-              bsonType: "array",
-              items: { bsonType: "objectId" }
-            }
+            chunks_usados: { bsonType: "array", items: { bsonType: "objectId" } }
           }
         }
       }
@@ -242,67 +287,179 @@ db.createCollection("queries", {
   validationAction: "warn"
 });
 
-// Índices para queries
-db.queries.createIndex({ id_usuario: 1, fecha: -1 }, { name: "idx_query_usuario_fecha" });
-db.queries.createIndex({ fecha: -1 }, { name: "idx_query_fecha" });
-// Índice de texto para búsqueda sobre preguntas previas
-db.queries.createIndex({ texto_pregunta: "text" }, { name: "idx_query_texto" });
+db.consultas.createIndex({ id_usuario: 1, fecha: -1 }, { name: "idx_consulta_usuario_fecha" });
+db.consultas.createIndex({ fecha: -1 }, { name: "idx_consulta_fecha" });
+db.consultas.createIndex({ texto_pregunta: "text" }, { name: "idx_consulta_texto" });
 
-print("✓ Colección 'queries' creada con índices");
-
-// ===========================================================
-// NOTA ATLAS VECTOR SEARCH
-// Los índices vectoriales NO se crean desde mongosh.
-// Debes crearlos desde Atlas UI o Atlas CLI:
-//
-// Atlas UI → Search → Create Index → JSON Editor:
-//
-// Índice para canciones (emb_letra):
-// {
-//   "fields": [{
-//     "type": "vector",
-//     "path": "emb_letra",
-//     "numDimensions": 384,
-//     "similarity": "cosine"
-//   }]
-// }
-// Nombre sugerido: vector_idx_emb_letra
-//
-// Índice para portadas (emb_imagen) en colección canciones/portadas:
-// {
-//   "fields": [{
-//     "type": "vector",
-//     "path": "emb_imagen",
-//     "numDimensions": 512,
-//     "similarity": "cosine"
-//   }]
-// }
-// Nombre sugerido: idx_vector_imagen
-// ===========================================================
-
-print("⚠ Recuerda crear los índices vectoriales desde Atlas UI");
-
-// ===========================================================
-// AGGREGATIONS — Las 3 del día
-// ===========================================================
-
-// ----------------------------------------------------------
-// AGG 1: Historial de consultas por usuario
-// Colección: queries — find directo, no necesita aggregation
-// Incluido como pipeline para consistencia con el backend
-// ----------------------------------------------------------
-const historialConsultasUsuario = (id_usuario_str) => [
-  {
-    $match: {
-      id_usuario: ObjectId(id_usuario_str)
+// 9. resenas (polimorfica)
+db.createCollection("resenas", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["id_usuario", "tipo_objeto", "id_objeto", "calificacion"],
+      properties: {
+        id_usuario: { bsonType: "objectId" },
+        tipo_objeto: { bsonType: "string", enum: ["cancion", "album", "playlist"] },
+        id_objeto: { bsonType: "objectId" },
+        calificacion: { bsonType: "int", minimum: 1, maximum: 5 },
+        comentario: { bsonType: ["string", "null"] },
+        emb_comentario: { bsonType: ["array", "null"] },
+        fecha: { bsonType: "date" }
+      }
     }
   },
-  {
-    $sort: { fecha: -1 }
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.resenas.createIndex({ id_usuario: 1 }, { name: "idx_resena_usuario" });
+db.resenas.createIndex({ tipo_objeto: 1, id_objeto: 1 }, { name: "idx_resena_objeto" });
+db.resenas.createIndex({ calificacion: -1 }, { name: "idx_resena_calificacion" });
+db.resenas.createIndex({ fecha: -1 }, { name: "idx_resena_fecha" });
+
+// 10. chunks
+db.createCollection("chunks", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["doc_id", "tipo_fuente", "chunk_index", "estrategia_chunking", "chunk_texto", "embedding", "modelo"],
+      properties: {
+        doc_id: { bsonType: "objectId" },
+        tipo_fuente: { bsonType: "string", enum: ["cancion", "artista", "album"] },
+        chunk_index: { bsonType: "int", minimum: 0 },
+        estrategia_chunking: { bsonType: "string", enum: ["fixed-size", "sentence-aware", "semantic"] },
+        chunk_texto: { bsonType: "string" },
+        embedding: {
+          bsonType: "array",
+          minItems: 384, maxItems: 384,
+          items: { bsonType: "double" }
+        },
+        modelo: { bsonType: "string" },
+        fecha_ingesta: { bsonType: "date" },
+        metadata: { bsonType: ["object", "null"] }
+      }
+    }
   },
-  {
-    $limit: 50
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.chunks.createIndex({ doc_id: 1, chunk_index: 1 }, { name: "idx_chunk_doc_index" });
+db.chunks.createIndex({ tipo_fuente: 1 }, { name: "idx_chunk_tipo_fuente" });
+db.chunks.createIndex({ estrategia_chunking: 1 }, { name: "idx_chunk_estrategia" });
+db.chunks.createIndex({ doc_id: 1, estrategia_chunking: 1 }, { name: "idx_chunk_doc_estrategia" });
+
+// 11. evaluaciones (RAGAS)
+db.createCollection("evaluaciones", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["id_consulta", "metricas"],
+      properties: {
+        id_consulta: { bsonType: "objectId" },
+        metricas: {
+          bsonType: "object",
+          properties: {
+            faithfulness: { bsonType: ["double", "null"] },
+            answer_relevancy: { bsonType: ["double", "null"] },
+            context_precision: { bsonType: ["double", "null"] },
+            context_recall: { bsonType: ["double", "null"] }
+          }
+        },
+        modelo_evaluado: { bsonType: ["string", "null"] },
+        fecha_evaluacion: { bsonType: "date" }
+      }
+    }
   },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.evaluaciones.createIndex({ id_consulta: 1 }, { name: "idx_evaluacion_consulta" });
+db.evaluaciones.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluacion_fecha" });
+
+// ====== Índices Vectoriales (Atlas Search) ======
+print("\n--- Solicitando creación de Índices de Vector Search en Atlas ---");
+try {
+  db.runCommand({
+    createSearchIndexes: "canciones",
+    indexes: [
+      {
+        name: "vector_idx_emb_letra",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "emb_letra",
+              numDimensions: 384,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_emb_letra (canciones)");
+} catch(e) {
+  print("X Error vector_idx_emb_letra:", e.message);
+}
+
+try {
+  db.runCommand({
+    createSearchIndexes: "chunks",
+    indexes: [
+      {
+        name: "vector_idx_embedding_chunks",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "embedding",
+              numDimensions: 384,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_embedding_chunks (chunks)");
+} catch(e) {
+  print("X Error vector_idx_embedding_chunks:", e.message);
+}
+
+try {
+  db.runCommand({
+    createSearchIndexes: "albums",
+    indexes: [
+      {
+        name: "vector_idx_portada_imagen",
+        type: "vectorSearch",
+        definition: {
+          fields: [
+            {
+              type: "vector",
+              path: "portada.emb_imagen",
+              numDimensions: 512,
+              similarity: "cosine"
+            }
+          ]
+        }
+      }
+    ]
+  });
+  print("✓ Solicitado vector_idx_portada_imagen (albums)");
+} catch(e) {
+  print("X Error vector_idx_portada_imagen:", e.message);
+}
+
+// Aggregations de referencia
+const historialConsultasUsuario = (id_usuario_str) => [
+  { $match: { id_usuario: ObjectId(id_usuario_str) } },
+  { $sort: { fecha: -1 } },
+  { $limit: 50 },
   {
     $project: {
       texto_pregunta: 1,
@@ -313,10 +470,6 @@ const historialConsultasUsuario = (id_usuario_str) => [
   }
 ];
 
-// ----------------------------------------------------------
-// AGG 2: Emociones dominantes de un usuario
-// Colección: events — sin $lookup porque emocion está embebida
-// ----------------------------------------------------------
 const emocionDominanteUsuario = (id_usuario_str, dias = 365) => [
   {
     $match: {
@@ -326,34 +479,13 @@ const emocionDominanteUsuario = (id_usuario_str, dias = 365) => [
       }
     }
   },
-  {
-    $group: {
-      _id: "$emocion.nombre",
-      veces: { $sum: 1 }
-    }
-  },
-  {
-    $sort: { veces: -1 }
-  },
-  {
-    $project: {
-      _id: 0,
-      nombre_emocion: "$_id",
-      veces: 1
-    }
-  }
+  { $group: { _id: "$emocion.nombre", veces: { $sum: 1 } } },
+  { $sort: { veces: -1 } },
+  { $project: { _id: 0, nombre_emocion: "$_id", veces: 1 } }
 ];
 
-// ----------------------------------------------------------
-// AGG 3: Playlists con más canciones (de un usuario)
-// Colección: playlists — $size sobre array embebido, sin $lookup
-// ----------------------------------------------------------
 const playlistsConMasCanciones = (id_usuario_str, limit = 10) => [
-  {
-    $match: {
-      id_usuario: ObjectId(id_usuario_str)
-    }
-  },
+  { $match: { id_usuario: ObjectId(id_usuario_str) } },
   {
     $project: {
       titulo: 1,
@@ -363,17 +495,35 @@ const playlistsConMasCanciones = (id_usuario_str, limit = 10) => [
       fecha_creacion: 1
     }
   },
+  { $sort: { n_canciones: -1 } },
+  { $limit: limit }
+];
+
+const chunksPorEstrategia = () => [
+  { $group: { _id: "$estrategia_chunking", total: { $sum: 1 } } },
+  { $sort: { total: -1 } },
+  { $project: { _id: 0, estrategia: "$_id", total: 1 } }
+];
+
+const resenasPorTipo = () => [
   {
-    $sort: { n_canciones: -1 }
+    $group: {
+      _id: "$tipo_objeto",
+      total: { $sum: 1 },
+      promedio_calificacion: { $avg: "$calificacion" }
+    }
   },
+  { $sort: { total: -1 } },
   {
-    $limit: limit
+    $project: {
+      _id: 0,
+      tipo_objeto: "$_id",
+      total: 1,
+      promedio_calificacion: { $round: ["$promedio_calificacion", 2] }
+    }
   }
 ];
 
-// ===========================================================
-// PRUEBA RÁPIDA — Verifica que las colecciones existen
-// ===========================================================
-print("\n=== Colecciones en spotify_rag ===");
-db.getCollectionNames().forEach(c => print(" •", c));
-print("\n=== Setup completo ✓ ===");
+print("\nColecciones en spotifyRAG:");
+db.getCollectionNames().forEach(c => print(" -", c));
+print("\nSetup completo");

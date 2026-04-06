@@ -11,11 +11,10 @@ export interface Artist {
   export interface Album {
     _id: string;
     titulo: string;
-    anio: number | null;
+    anio_lanzamiento: number | null;
     id_artista: string;
-    portada: { url: string; descripcion?: string } | null;
-    idioma: string;
-    fecha: string;
+    portada: { url: string; descripcion?: string; emb_imagen?: number[] } | null;
+    tipo: string;
   }
   
   export interface Song {
@@ -24,20 +23,23 @@ export interface Artist {
     letra: string;
     duracion: number;
     genero: string;
-    nombre_artista: string;
-    artista: {
-      id_artista: string;
-      nombre: string;
-      pais?: string;
-    };
-    album: {
-      id_album: string;
-      titulo: string;
-      anio?: number;
-    };
+    id_genero: string | null;
+    idioma: string;
     emociones: string[];
-    createdAt?: string;
-    updatedAt?: string;
+    artista: {
+      _id: string;
+      nombre: string;
+      pais: string;
+    };
+    id_artista: string;
+    album: {
+      _id: string;
+      titulo: string;
+      anio: number;
+    };
+    id_album: string;
+    portada_url?: string;
+    fecha_ingreso?: string;
   }
   
   export interface Playlist {
@@ -112,7 +114,7 @@ export interface Artist {
   
   export interface SearchResult {
     albums: Album[];
-    artists: Artist[];
+    artistas: Artist[];
   }
   
   // API State types for hooks

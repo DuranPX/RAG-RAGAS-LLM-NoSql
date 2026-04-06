@@ -55,13 +55,9 @@ export default function PlaylistsPage() {
           <div className="space-y-2">
             <h1 className="text-4xl font-bold text-white tracking-tight">Mis Playlists</h1>
             <p className="text-white/40 text-sm max-w-lg">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Gestiona y analiza tus listas de reproducción personalizadas.
+              Gestiona y analiza tus listas de reproducción personalizadas.
             </p>
           </div>
-          <Button className="rounded-full bg-purple-600 hover:bg-purple-700 text-white px-6 font-bold shadow-lg shadow-purple-600/20">
-            <Plus className="mr-2 h-5 w-5" />
-            Nueva Playlist
-          </Button>
         </div>
 
         {/* Filter & Search Row */}
@@ -118,6 +114,7 @@ export default function PlaylistsPage() {
                 songCount={playlist.canciones?.length || 0}
                 owner={users[playlist.id_usuario] || 'Usuario'}
                 coverUrl={playlist.portada?.url}
+                songCovers={playlist.canciones?.filter(c => c.portada_url).map(c => c.portada_url)}
               />
             ))}
           </div>

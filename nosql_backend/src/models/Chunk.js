@@ -18,7 +18,7 @@ const chunkSchema = {
     },
     estrategia_chunking: {
       bsonType: 'string',
-      enum: ['fixed-size', 'sentence-aware']
+      enum: ['fixed-size', 'sentence-aware', 'semantic']
     },
     chunk_texto: {
       bsonType: 'string'

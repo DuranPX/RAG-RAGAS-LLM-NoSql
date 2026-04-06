@@ -1,8 +1,6 @@
-// Driver nativo mongodb
 const { getCollections } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
-// Validación básica de campos requeridos coon regex mínimo para correo
 function validateUsuario({ nombre, correo, plan_suscripcion }) {
   const errores = [];
   if (!nombre || typeof nombre !== "string") errores.push("nombre requerido");
@@ -15,19 +13,16 @@ function validateUsuario({ nombre, correo, plan_suscripcion }) {
 
 class User {
 
-  // Listar todos los usuarios
   static async findAll() {
     const { usuarios } = getCollections();
     return usuarios.find({}).toArray();
   }
 
-  // Buscar por ID
   static async findById(id) {
     const { usuarios } = getCollections();
     return usuarios.findOne({ _id: new ObjectId(id) });
   }
 
-  // Crear usuario con portada de iTunes opcional
   static async create({ nombre, correo, plan_suscripcion = "free", portada = null }) {
     const errores = validateUsuario({ nombre, correo, plan_suscripcion });
     if (errores.length) throw { status: 400, errores };
@@ -47,7 +42,6 @@ class User {
     return { _id: result.insertedId, ...doc };
   }
 
-  // Incrementar tiempo de escucha del usuario
   static async incrementarTiempo(id, minutos) {
     if (!minutos || minutos <= 0) throw { status: 400, errores: ["minutos debe ser > 0"] };
 
@@ -62,9 +56,8 @@ class User {
     return result;
   }
 
-  // Obtener emoción predominante en sus eventos
   static async emocionDominante(id, dias = 365) {
-    const { events } = getCollections();
+    const { eventos } = getCollections();
 
     const pipeline = [
       {
@@ -91,12 +84,11 @@ class User {
       }
     ];
 
-    return events.aggregate(pipeline).toArray();
+    return eventos.aggregate(pipeline).toArray();
   }
 
-  // Top artistas escuchados
   static async topArtistas(id, limit = 10) {
-    const { events } = getCollections();
+    const { eventos } = getCollections();
 
     const pipeline = [
       { $match: { id_usuario: new ObjectId(id) } },
@@ -117,7 +109,52 @@ class User {
       }
     ];
 
-    return events.aggregate(pipeline).toArray();
+    return eventos.aggregate(pipeline).toArray();
+  }
+
+  static async getStats() {
+    const { usuarios } = getCollections();
+    const totalCount = await usuarios.countDocuments();
+    
+    if (totalCount === 0) {
+      return {
+        total_usuarios: 0,
+        suscripciones: { free: 0, premium: 0, family: 0 },
+        promedio_tiempo_escucha: 0,
+        historial_promedio: 0,
+        mensaje: "No hay metricas registradas"
+      };
+    }
+
+    const pipeline = [
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          free_count: { $sum: { $cond: [{ $eq: ["$plan_suscripcion", "free"] }, 1, 0] } },
+          premium_count: { $sum: { $cond: [{ $eq: ["$plan_suscripcion", "premium"] }, 1, 0] } },
+          family_count: { $sum: { $cond: [{ $eq: ["$plan_suscripcion", "family"] }, 1, 0] } },
+          total_tiempo: { $sum: { $ifNull: ["$tiempo_escucha", 0] } },
+          total_historial: { $sum: { $size: { $ifNull: ["$historial_reciente", []] } } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          total_usuarios: "$total",
+          suscripciones: {
+            free: { $round: [{ $multiply: [{ $divide: ["$free_count", "$total"] }, 100] }, 1] },
+            premium: { $round: [{ $multiply: [{ $divide: ["$premium_count", "$total"] }, 100] }, 1] },
+            family: { $round: [{ $multiply: [{ $divide: ["$family_count", "$total"] }, 100] }, 1] }
+          },
+          promedio_tiempo_escucha: { $round: [{ $divide: ["$total_tiempo", "$total"] }, 1] },
+          historial_promedio: { $round: [{ $divide: ["$total_historial", "$total"] }, 1] }
+        }
+      }
+    ];
+
+    const result = await usuarios.aggregate(pipeline).toArray();
+    return result[0];
   }
 }
 

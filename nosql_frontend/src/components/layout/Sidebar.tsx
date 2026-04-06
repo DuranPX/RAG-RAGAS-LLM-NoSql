@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Music2, Home, ListMusic, Users, BarChart2 } from 'lucide-react';
-import ChatPanel from './ChatPanel';
 import { Separator } from '@/components/ui/separator';
 
 const Sidebar = () => {
@@ -13,8 +12,8 @@ const Sidebar = () => {
   const navLinks = [
     { name: 'Home', href: '/home', icon: Home },
     { name: 'ListMusic', href: '/playlists', icon: ListMusic },
-    { name: 'Users', href: '/artists', icon: Users },
-    { name: 'BarChart2', href: '/stats', icon: BarChart2 },
+    { name: 'Usuarios', href: '/users', icon: Users },
+    { name: 'Métricas y Estadísticas', href: '/stats', icon: BarChart2 },
   ];
 
   return (
@@ -60,15 +59,7 @@ const Sidebar = () => {
           </ul>
         </div>
 
-        {/* AI Assistant Section */}
-        <div className="h-[60%] flex flex-col">
-          <h3 className="px-3 text-[10px] font-bold text-white/40 uppercase tracking-widest mb-4">
-            ASISTENTE IA
-          </h3>
-          <div className="flex-1">
-            <ChatPanel />
-          </div>
-        </div>
+
       </nav>
     </aside>
   );

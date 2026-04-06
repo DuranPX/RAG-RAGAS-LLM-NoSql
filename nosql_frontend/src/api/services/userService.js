@@ -1,6 +1,7 @@
 import { get, post, patch } from '@/api/api';
 
 export const userService = {
+  getStats: () => get('/usuarios/stats'),
   getAll: () => get('/usuarios'),
   getById: (id) => get(`/usuarios/${id}`),
   create: (data) => post('/usuarios', data),
