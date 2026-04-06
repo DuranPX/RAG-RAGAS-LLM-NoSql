@@ -12,13 +12,13 @@ function validateArtist({ nombre }) {
 class Artist {
 
   static async findAll() {
-    const { artists } = getCollections();
-    return artists.find().toArray();
+    const { artistas } = getCollections();
+    return artistas.find().toArray();
   }
 
   static async findById(id) {
-    const { artists } = getCollections();
-    return artists.findOne({ _id: new ObjectId(id) });
+    const { artistas } = getCollections();
+    return artistas.findOne({ _id: new ObjectId(id) });
   }
 
   static async create({
@@ -31,7 +31,7 @@ class Artist {
     const errores = validateArtist({ nombre });
     if (errores.length) throw { status: 400, errores };
 
-    const { artists } = getCollections();
+    const { artistas } = getCollections();
 
     const doc = {
       nombre,
@@ -43,14 +43,14 @@ class Artist {
       idioma
     };
 
-    const result = await artists.insertOne(doc);
+    const result = await artistas.insertOne(doc);
     return { _id: result.insertedId, ...doc };
   }
 
   static async update(id, data) {
-    const { artists } = getCollections();
+    const { artistas } = getCollections();
 
-    const result = await artists.findOneAndUpdate(
+    const result = await artistas.findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $set: data },
       { returnDocument: "after" }
@@ -61,9 +61,9 @@ class Artist {
   }
 
   static async delete(id) {
-    const { artists } = getCollections();
+    const { artistas } = getCollections();
 
-    const result = await artists.deleteOne({ _id: new ObjectId(id) });
+    const result = await artistas.deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       throw { status: 404, errores: ["Artist no encontrado"] };

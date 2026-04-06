@@ -47,7 +47,7 @@ export default function HomePage() {
     duration: formatDuration(song.duracion),
     plays: song.genero || '',
     popularity: Math.floor(Math.random() * 40) + 60,
-    coverUrl: undefined,
+    coverUrl: song.portada_url || undefined,
   });
 
   const handleRetry = () => {
@@ -64,7 +64,7 @@ export default function HomePage() {
             <div className="max-w-xl space-y-6 text-center md:text-left">
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Descubre tu música</h2>
               <p className="text-lg text-white/80 leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Explora el ecosistema musical con IA. Busca artistas, álbumes y canciones mediante consultas semánticas y descubre nuevas emociones.
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                 <Button className="bg-white text-purple-700 hover:bg-purple-50 rounded-full px-8 py-6 h-auto font-bold text-lg shadow-lg group">
@@ -127,6 +127,7 @@ export default function HomePage() {
                     genre={song.genero || ''}
                     duration={formatDuration(song.duracion)}
                     plays={song.emociones?.[0] || song.genero || ''}
+                    coverUrl={song.portada_url}
                   />
                 </div>
               ))}

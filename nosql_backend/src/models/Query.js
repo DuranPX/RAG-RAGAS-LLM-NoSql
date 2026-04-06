@@ -1,11 +1,8 @@
-// Colapsa: consulta + query_embedding + resultados en un solo documento
-
 const { getCollections } = require("../config/db");
 const { ObjectId } = require("mongodb");
 
-function validateQuery({ id_usuario, texto_pregunta }) {
+function validateQuery({ texto_pregunta }) {
   const errores = [];
-  if (!id_usuario) errores.push("id_usuario requerido");
   if (!texto_pregunta || typeof texto_pregunta !== "string") {
     errores.push("texto_pregunta requerido");
   }
@@ -14,51 +11,56 @@ function validateQuery({ id_usuario, texto_pregunta }) {
 
 class Query {
 
-  // CREATE QUERY
-  // El vector llega ya generado desde el microservicio Python
-  // Python envía POST /api/queries con { vector_embedding: float[384] }
-  // Reemplaza: crear_consulta_con_embedding_atomic (RPC Supabase)
   static async create({
-    id_usuario,
+    id_usuario = null,
     texto_pregunta,
     vector_embedding = null,
     modelo_embedding = "all-MiniLM-L6-v2",
+    tipo_consulta = "texto-texto",
+    tiene_imagen = false,
     resultados = []
   }) {
-    const errores = validateQuery({ id_usuario, texto_pregunta });
+    const errores = validateQuery({ texto_pregunta });
     if (errores.length) throw { status: 400, errores };
 
-    const { queries } = getCollections();
+    const { consultas, usuarios } = getCollections();
+
+    // Lógica para usuario estático: si no pasan ID, asignamos el primero que encontremos
+    let finalUserId = id_usuario;
+    if (!finalUserId) {
+      const mockUser = await usuarios.findOne({});
+      if (mockUser) finalUserId = mockUser._id;
+    } else {
+      finalUserId = new ObjectId(id_usuario);
+    }
 
     const doc = {
-      id_usuario: new ObjectId(id_usuario),
+      id_usuario: finalUserId,
       texto_pregunta,
       fecha: new Date(),
-      vector_embedding,          
+      tipo_consulta,
+      tiene_imagen,
+      vector_embedding,
       modelo_embedding,
-      resultados,                // [{ id_cancion, titulo, nombre_artista, score_similitud }]
-      respuesta_llm: null        // se actualiza con guardarRespuesta()
+      resultados,
+      respuesta_llm: null
     };
 
-    const result = await queries.insertOne(doc);
+    const result = await consultas.insertOne(doc);
     return { _id: result.insertedId, ...doc };
   }
 
-  // GUARDAR RESPUESTA LLM
-  // Se llama después de que el LLM genera la respuesta
-  // chunks_usados - ObjectIds de la colección chunks (referenciados)
-  // Sirve como contexto para evaluación RAGAS
   static async guardarRespuesta(id, { texto, modelo_usado, chunks_usados = [] }) {
-    const { queries } = getCollections();
+    const { consultas } = getCollections();
 
     const respuesta_llm = {
       texto,
-      modelo_usado,                                          
+      modelo_usado,
       fecha_generacion: new Date(),
-      chunks_usados: chunks_usados.map(id => new ObjectId(id))  
+      chunks_usados: chunks_usados.map(cid => new ObjectId(cid))
     };
 
-    const result = await queries.findOneAndUpdate(
+    const result = await consultas.findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $set: { respuesta_llm } },
       { returnDocument: "after" }
@@ -68,11 +70,9 @@ class Query {
     return result;
   }
 
-  // HISTORIAL POR USUARIO — Aggregation 1
-  // El vector NO se devuelve al cliente (pesado e innecesario)
-  // Reemplaza: get_consultas_usuario (RPC Supabase)
+  // Excluye vector_embedding del resultado
   static async historialPorUsuario(id_usuario, limit = 50) {
-    const { queries } = getCollections();
+    const { consultas } = getCollections();
 
     const pipeline = [
       { $match: { id_usuario: new ObjectId(id_usuario) } },
@@ -87,19 +87,17 @@ class Query {
           "respuesta_llm.modelo_usado": 1,
           "respuesta_llm.fecha_generacion": 1,
           n_resultados: { $size: { $ifNull: ["$resultados", []] } },
-          vector_embedding: 0    // excluido — el cliente no lo necesita
+          vector_embedding: 0
         }
       }
     ];
 
-    return queries.aggregate(pipeline).toArray();
+    return consultas.aggregate(pipeline).toArray();
   }
 
-  // FIND BY ID — detalle completo (incluye vector y chunks)
-  // Solo para uso interno del pipeline RAG
   static async findById(id) {
-    const { queries } = getCollections();
-    return queries.findOne({ _id: new ObjectId(id) });
+    const { consultas } = getCollections();
+    return consultas.findOne({ _id: new ObjectId(id) });
   }
 }
 
