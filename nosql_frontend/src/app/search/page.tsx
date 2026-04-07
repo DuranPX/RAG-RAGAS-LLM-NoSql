@@ -1,15 +1,20 @@
+// ================================================================
+// /search — Página de búsqueda conectada al backend RAG
+// Recibe el query por URL params y muestra resultados + respuesta
+// ================================================================
+
 'use client';
 
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppShell from '@/components/layout/AppShell';
-import RAGResponse from '@/shared/components/cards/RAGResponse';
 import SongCard from '@/components/cards/SongCard';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import { useSearch } from '@/shared/hooks/useSearch';
 import { Search } from 'lucide-react';
 import Link from 'next/link';
+import SearchFilters from '@/components/ui/SearchFilters';
 
 // Formatea segundos a mm:ss
 const formatDuration = (seconds) => {
@@ -22,12 +27,14 @@ const formatDuration = (seconds) => {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('q') || '';
+  const genreParam = searchParams.get('genre') || undefined;
+  const yearParam  = searchParams.get('year')  || undefined;
   const { results, isLoading, error, search } = useSearch();
 
   // Ejecutar búsqueda cuando llega el query por URL
   useEffect(() => {
-    if (queryParam) search(queryParam);
-  }, [queryParam]);
+    if (queryParam) search(queryParam, { genre: genreParam, year: yearParam });
+  }, [queryParam, genreParam, yearParam]);
 
   return (
     <AppShell>
@@ -44,6 +51,9 @@ export default function SearchPage() {
             )}
           </div>
         </div>
+
+        {/* Filtros */}
+        <SearchFilters />
 
         {/* Resultados */}
         <section className="space-y-8">

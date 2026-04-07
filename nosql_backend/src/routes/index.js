@@ -218,26 +218,25 @@ router.post("/search", handle(async (req) => {
   const { texto, anio, pais, genero } = req.body;
   const { albums, artistas } = require("../config/db").getCollections();
 
+  // --- Filtro de artistas (igual que antes) ---
   let artistFilter = {};
-  let albumFilter  = {};
-
-  if (pais) artistFilter.pais = pais;
+  if (pais)   artistFilter.pais = pais;
   if (genero) artistFilter.generos = { $regex: genero, $options: "i" };
-  if (texto) artistFilter.nombre = { $regex: texto, $options: "i" };
+  if (texto)  artistFilter.nombre  = { $regex: texto,  $options: "i" };
 
   const artistsRes = await artistas.find(artistFilter).toArray();
-  const artistIds = artistsRes.map(a => a._id);
+  const artistIds  = artistsRes.map(a => a._id);
 
+  // --- Filtro de albums ---
+  let albumFilter = {};
   if (anio) albumFilter.anio_lanzamiento = Number(anio);
   if (texto) albumFilter.titulo = { $regex: texto, $options: "i" };
-
-  if (artistIds.length > 0) {
-    albumFilter.id_artista = { $in: artistIds };
-  }
+  if (artistIds.length > 0) albumFilter.id_artista = { $in: artistIds };
 
   const albumsRes = await albums.find(albumFilter).toArray();
-  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
+  const albumIds  = albumsRes.map(a => a._id);
 
+  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
   const extraArtists = await artistas.find({
     _id: { $in: artistIdsFromAlbums }
   }).toArray();
@@ -249,9 +248,29 @@ router.post("/search", handle(async (req) => {
     )
   ];
 
+  // Buscar canciones usando los IDs encontrados ---
+  let songFilter = {};
+  if (genero) songFilter.genero = { $regex: genero, $options: "i" };
+  if (texto)  songFilter.titulo = { $regex: texto,  $options: "i" };
+
+  // Filtrar por album (que ya trae el filtro de año y artista aplicado)
+  if (albumIds.length > 0) {
+    songFilter["album.id_album"] = { $in: albumIds };
+  } else if (anio || artistIds.length > 0) {
+    // Si había filtros pero no se encontraron albums/artistas, no devolver nada
+    return { albums: albumsRes, artistas: allArtists, canciones: [], total: 0, rag: null };
+  }
+
+  const canciones = await SongModel.find(songFilter, {
+    projection: { emb_letra: 0, letra: 0 } // no mandar los vectores al frontend
+  });
+
   return {
     albums: albumsRes,
-    artistas: allArtists
+    artistas: allArtists,
+    canciones,
+    total: canciones.length,
+    rag: null // aquí se conecta el pipeline RAG
   };
 }));
 

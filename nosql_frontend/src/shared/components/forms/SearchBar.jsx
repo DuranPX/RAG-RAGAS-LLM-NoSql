@@ -1,3 +1,10 @@
+// ================================================================
+// SearchBar.jsx — Barra de búsqueda conectada al backend RAG
+// Usa el hook useSearch para manejar estado y llamadas
+// ================================================================
+
+'use client';
+
 import React, { useRef, useEffect } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -51,7 +58,7 @@ const SearchBar = ({ className = '', onResults = undefined }) => {
         />
 
         {/* Filters */}
-        <select 
+        <select
           id="genre"
           className="hidden md:block bg-white/5 border border-white/10 rounded-full text-white/70 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-purple-500"
           onChange={(e) => setQuery(`${query} genero:${e.target.value}`.trim())}
@@ -62,7 +69,7 @@ const SearchBar = ({ className = '', onResults = undefined }) => {
           <option value="Hip-Hop" className="bg-black">Hip-Hop</option>
           <option value="Electronic" className="bg-black">Electronic</option>
         </select>
-        <select 
+        <select
           id="year"
           className="hidden md:block bg-white/5 border border-white/10 rounded-full text-white/70 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-purple-500"
           onChange={(e) => setQuery(`${query} año:${e.target.value}`.trim())}

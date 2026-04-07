@@ -12,14 +12,20 @@ export const useSearch = () => {
   const [isLoading, setLoading] = useState(false);
   const [error, setError]       = useState(null);
 
-  const search = useCallback(async (searchQuery) => {
+  const search = useCallback(async (searchQuery, filters = {}) => {
     if (!searchQuery?.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const data = await searchService.search({ texto: searchQuery });
+      const payload = {
+        texto: searchQuery,
+        ...(filters.genre && { genero: filters.genre === 'Todos' ? '' : filters.genre }),
+        ...(filters.year && { anio: filters.year === 'Todos' ? '' : filters.year }),
+        ...(filters.country && { pais: filters.country })
+      };
+      const data = await searchService.search(payload);
       setResults(data);
     } catch (err) {
       setError(err.message || 'Error al buscar');

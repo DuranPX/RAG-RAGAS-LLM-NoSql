@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
 interface ArtistCardProps {
   name: string;
   country: string;
-  genre: string;
+  genres: string[];
   listeners: string;
   imageUrl?: string;
+
+  onGenreClick?: (genre: string) => void;
 }
 
-const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genre, listeners, imageUrl }) => {
+const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genres, listeners, imageUrl, onGenreClick }) => {
   return (
     <Card className="flex flex-col items-center p-6 bg-white/5 border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300 group cursor-pointer hover:-translate-y-1">
       <CardContent className="p-0 flex flex-col items-center space-y-4">
@@ -46,9 +48,18 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genre, listeners
           </div>
           
           <div className="pt-2">
-            <Badge variant="outline" className="text-[9px] py-0 px-2 border-white/10 text-white/60 font-medium tracking-wide">
-              {genre}
-            </Badge>
+            <div className="flex flex-wrap justify-center gap-1 pt-2">
+              {genres?.map((g, i) => (
+                <Badge
+                  key={i}
+                  variant="outline"
+                  onClick={() => onGenreClick?.(g)} // 👈 AQUÍ
+                  className="cursor-pointer text-[9px] py-0 px-2 border-white/10 text-white/60 font-medium tracking-wide hover:text-white"
+                >
+                  {g}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
 
