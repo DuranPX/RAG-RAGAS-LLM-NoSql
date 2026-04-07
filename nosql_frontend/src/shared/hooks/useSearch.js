@@ -19,7 +19,7 @@ export const useSearch = () => {
     setError(null);
 
     try {
-      const data = await searchService.search({ query: searchQuery });
+      const data = await searchService.search({ texto: searchQuery });
       setResults(data);
     } catch (err) {
       setError(err.message || 'Error al buscar');

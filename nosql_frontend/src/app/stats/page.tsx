@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function StatsPage() {
 // ...
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: '¡Hola! Soy tu asistente IA de SpotiAnalytics (Groq). Puedes preguntarme sobre tus canciones, realizar búsquedas multimodales o revisar tus métricas analíticas.' }
+    { role: 'assistant', text: '¡Hola! Soy tu asistente IA MelodIA. Puedes preguntarme sobre tus canciones, realizar búsquedas multimodales o revisar tus métricas analíticas.' }
   ]);
   const [inputVal, setInputVal] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
