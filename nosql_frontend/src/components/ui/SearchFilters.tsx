@@ -5,7 +5,8 @@ import { useCallback } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 
 // Géneros
-const GENRES = ['rock', 'pop', 'jazz', 'clásica', 'hip-hop', 'electrónica', 'reggaeton', 'metal', 'folk'];
+const GENRES = ['Todos', 'Rock', 'Pop', 'Jazz', 'Clasic', 'Hip-Hop', 'Electronic', 
+                'Reggaeton', 'Metal', 'Folklore', 'House', 'Pop Latino', 'Vallenato', 'Cumbia'];
 
 // Años dinámicos
 const currentYear = new Date().getFullYear();

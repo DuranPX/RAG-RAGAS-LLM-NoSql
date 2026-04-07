@@ -248,7 +248,7 @@ router.post("/search", handle(async (req) => {
     )
   ];
 
-  // --- 👇 NUEVO: buscar canciones usando los IDs encontrados ---
+  // Buscar canciones usando los IDs encontrados ---
   let songFilter = {};
   if (genero) songFilter.genero = { $regex: genero, $options: "i" };
   if (texto)  songFilter.titulo = { $regex: texto,  $options: "i" };
