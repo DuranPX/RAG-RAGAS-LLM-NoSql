@@ -1,10 +1,3 @@
-// ================================================================
-// SearchBar.jsx — Barra de búsqueda conectada al backend RAG
-// Usa el hook useSearch para manejar estado y llamadas
-// ================================================================
-
-'use client';
-
 import React, { useRef, useEffect } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';

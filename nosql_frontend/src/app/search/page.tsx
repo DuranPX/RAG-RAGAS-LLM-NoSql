@@ -1,8 +1,3 @@
-// ================================================================
-// /search — Página de búsqueda conectada al backend RAG
-// Recibe el query por URL params y muestra resultados + respuesta
-// ================================================================
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -44,46 +39,64 @@ export default function SearchPage() {
             <h1 className="text-2xl font-bold text-white">
               {queryParam ? `Resultados para "${queryParam}"` : 'Buscar'}
             </h1>
-            {results?.total && (
-              <p className="text-sm text-white/40">{results.total} resultados encontrados</p>
+            {(results?.albums?.length > 0 || results?.artistas?.length > 0) && (
+              <p className="text-sm text-white/40">{(results?.albums?.length || 0) + (results?.artistas?.length || 0)} resultados encontrados</p>
             )}
           </div>
         </div>
 
-        {/* Respuesta RAG del LLM */}
-        <RAGResponse
-          response={results?.rag}
-          isLoading={isLoading}
-          error={error}
-        />
-
-        {/* Resultados de canciones */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white/80">Canciones</h2>
-
+        {/* Resultados */}
+        <section className="space-y-8">
           {isLoading ? (
             <LoadingSkeleton variant="card" rows={4} />
-          ) : !results?.canciones?.length ? (
+          ) : (!results?.albums?.length && !results?.artistas?.length) ? (
             <EmptyState
               icon="music"
               title="Sin resultados"
-              message={queryParam ? 'No se encontraron canciones para tu búsqueda.' : 'Escribe algo para buscar.'}
+              message={queryParam ? 'No se encontraron resultados para tu búsqueda.' : 'Escribe algo para buscar.'}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {results.canciones.map((song) => (
-                <Link key={song._id} href={`/song/${song._id}`}>
-                  <SongCard
-                    title={song.titulo}
-                    artist={song.artista?.nombre || ''}
-                    genre={song.genero || ''}
-                    duration={formatDuration(song.duracion)}
-                    plays={song.emociones?.[0] || ''}
-                    coverUrl={song.portada_url}
-                  />
-                </Link>
-              ))}
-            </div>
+            <>
+              {results?.artistas && results.artistas.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-white/80">Artistas</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    {results.artistas.map((artista) => (
+                      <Link key={artista._id} href={`/artist/${artista._id}`}>
+                        <SongCard
+                          title={artista.nombre}
+                          artist={artista.pais || ''}
+                          genre={artista.generos?.[0] || ''}
+                          duration={''}
+                          plays={'Artista'}
+                          coverUrl={artista.imagen?.url || ''}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results?.albums && results.albums.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-white/80">Álbumes</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    {results.albums.map((album) => (
+                      <Link key={album._id} href={`/album/${album._id}`}>
+                        <SongCard
+                          title={album.titulo}
+                          artist={''}
+                          genre={album.anio_lanzamiento ? album.anio_lanzamiento.toString() : ''}
+                          duration={''}
+                          plays={album.tipo}
+                          coverUrl={album.portada?.url}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>
