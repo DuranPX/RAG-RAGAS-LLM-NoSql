@@ -378,8 +378,8 @@ db.createCollection("evaluaciones", {
 db.evaluaciones.createIndex({ id_consulta: 1 }, { name: "idx_evaluacion_consulta" });
 db.evaluaciones.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluacion_fecha" });
 
-// ====== Índices Vectoriales (Atlas Search) ======
-print("\n--- Solicitando creación de Índices de Vector Search en Atlas ---");
+//indices Vectoriales (Atlas Search)
+print("\n creación de Índices de Vector Search en Atlas");
 try {
   db.runCommand({
     createSearchIndexes: "canciones",
@@ -400,9 +400,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_emb_letra (canciones)");
+  print("Solicitado vector_idx_emb_letra (canciones)");
 } catch(e) {
-  print("X Error vector_idx_emb_letra:", e.message);
+  print("Error vector_idx_emb_letra:", e.message);
 }
 
 try {
@@ -425,9 +425,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_embedding_chunks (chunks)");
+  print("vector_idx_embedding_chunks (chunks)");
 } catch(e) {
-  print("X Error vector_idx_embedding_chunks:", e.message);
+  print("Error vector_idx_embedding_chunks:", e.message);
 }
 
 try {
@@ -450,9 +450,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_portada_imagen (albums)");
+  print("Solicitado vector_idx_portada_imagen (albums)");
 } catch(e) {
-  print("X Error vector_idx_portada_imagen:", e.message);
+  print("Error vector_idx_portada_imagen:", e.message);
 }
 
 // Aggregations de referencia
