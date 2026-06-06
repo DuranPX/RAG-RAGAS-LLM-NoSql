@@ -20,6 +20,9 @@ __pycache__/
 *.pyo
 .pytest_cache/
 
+gitlog.txt
+gitdiff.txt
+
 # Sistema
 .DS_Store
 Thumbs.db
