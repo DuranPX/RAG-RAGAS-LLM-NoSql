@@ -1,0 +1,448 @@
+﻿diff --git a/nosql_backend/src/routes/index.js b/nosql_backend/src/routes/index.js
+index 60f4664..846d4eb 100644
+--- a/nosql_backend/src/routes/index.js
++++ b/nosql_backend/src/routes/index.js
+@@ -218,26 +218,25 @@ router.post("/search", handle(async (req) => {
+   const { texto, anio, pais, genero } = req.body;
+   const { albums, artistas } = require("../config/db").getCollections();
+ 
++  // --- Filtro de artistas (igual que antes) ---
+   let artistFilter = {};
+-  let albumFilter  = {};
+-
+-  if (pais) artistFilter.pais = pais;
++  if (pais)   artistFilter.pais = pais;
+   if (genero) artistFilter.generos = { $regex: genero, $options: "i" };
+-  if (texto) artistFilter.nombre = { $regex: texto, $options: "i" };
++  if (texto)  artistFilter.nombre  = { $regex: texto,  $options: "i" };
+ 
+   const artistsRes = await artistas.find(artistFilter).toArray();
+-  const artistIds = artistsRes.map(a => a._id);
++  const artistIds  = artistsRes.map(a => a._id);
+ 
++  // --- Filtro de albums ---
++  let albumFilter = {};
+   if (anio) albumFilter.anio_lanzamiento = Number(anio);
+   if (texto) albumFilter.titulo = { $regex: texto, $options: "i" };
+-
+-  if (artistIds.length > 0) {
+-    albumFilter.id_artista = { $in: artistIds };
+-  }
++  if (artistIds.length > 0) albumFilter.id_artista = { $in: artistIds };
+ 
+   const albumsRes = await albums.find(albumFilter).toArray();
+-  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
++  const albumIds  = albumsRes.map(a => a._id);
+ 
++  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
+   const extraArtists = await artistas.find({
+     _id: { $in: artistIdsFromAlbums }
+   }).toArray();
+@@ -249,9 +248,29 @@ router.post("/search", handle(async (req) => {
+     )
+   ];
+ 
++  // Buscar canciones usando los IDs encontrados ---
++  let songFilter = {};
++  if (genero) songFilter.genero = { $regex: genero, $options: "i" };
++  if (texto)  songFilter.titulo = { $regex: texto,  $options: "i" };
++
++  // Filtrar por album (que ya trae el filtro de a├▒o y artista aplicado)
++  if (albumIds.length > 0) {
++    songFilter["album.id_album"] = { $in: albumIds };
++  } else if (anio || artistIds.length > 0) {
++    // Si hab├¡a filtros pero no se encontraron albums/artistas, no devolver nada
++    return { albums: albumsRes, artistas: allArtists, canciones: [], total: 0, rag: null };
++  }
++
++  const canciones = await SongModel.find(songFilter, {
++    projection: { emb_letra: 0, letra: 0 } // no mandar los vectores al frontend
++  });
++
+   return {
+     albums: albumsRes,
+-    artistas: allArtists
++    artistas: allArtists,
++    canciones,
++    total: canciones.length,
++    rag: null // aqu├¡ se conecta el pipeline RAG
+   };
+ }));
+ 
+diff --git a/nosql_frontend/package-lock.json b/nosql_frontend/package-lock.json
+index 4dd2c96..260e5a2 100644
+--- a/nosql_frontend/package-lock.json
++++ b/nosql_frontend/package-lock.json
+@@ -25,8 +25,8 @@
+         "tw-animate-css": "^1.4.0"
+       },
+       "devDependencies": {
+-        "@types/node": "^25.5.0",
+-        "@types/react": "^19.2.14",
++        "@types/node": "25.5.0",
++        "@types/react": "19.2.14",
+         "@types/react-dom": "^19.2.3",
+         "autoprefixer": "^10.4.27",
+         "eslint": "^8",
+diff --git a/nosql_frontend/package.json b/nosql_frontend/package.json
+index 49f9a02..d68274a 100644
+--- a/nosql_frontend/package.json
++++ b/nosql_frontend/package.json
+@@ -27,8 +27,8 @@
+     "tw-animate-css": "^1.4.0"
+   },
+   "devDependencies": {
+-    "@types/node": "^25.5.0",
+-    "@types/react": "^19.2.14",
++    "@types/node": "25.5.0",
++    "@types/react": "19.2.14",
+     "@types/react-dom": "^19.2.3",
+     "autoprefixer": "^10.4.27",
+     "eslint": "^8",
+diff --git a/nosql_frontend/src/app/search/page.tsx b/nosql_frontend/src/app/search/page.tsx
+index f861c01..38da076 100644
+--- a/nosql_frontend/src/app/search/page.tsx
++++ b/nosql_frontend/src/app/search/page.tsx
+@@ -1,15 +1,20 @@
++// ================================================================
++// /search ÔÇö P├ígina de b├║squeda conectada al backend RAG
++// Recibe el query por URL params y muestra resultados + respuesta
++// ================================================================
++
+ 'use client';
+ 
+ import React, { useEffect } from 'react';
+ import { useSearchParams } from 'next/navigation';
+ import AppShell from '@/components/layout/AppShell';
+-import RAGResponse from '@/shared/components/cards/RAGResponse';
+ import SongCard from '@/components/cards/SongCard';
+ import EmptyState from '@/components/ui/EmptyState';
+ import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
+ import { useSearch } from '@/shared/hooks/useSearch';
+ import { Search } from 'lucide-react';
+ import Link from 'next/link';
++import SearchFilters from '@/components/ui/SearchFilters';
+ 
+ // Formatea segundos a mm:ss
+ const formatDuration = (seconds) => {
+@@ -22,12 +27,14 @@ const formatDuration = (seconds) => {
+ export default function SearchPage() {
+   const searchParams = useSearchParams();
+   const queryParam = searchParams.get('q') || '';
++  const genreParam = searchParams.get('genre') || undefined;
++  const yearParam  = searchParams.get('year')  || undefined;
+   const { results, isLoading, error, search } = useSearch();
+ 
+   // Ejecutar b├║squeda cuando llega el query por URL
+   useEffect(() => {
+-    if (queryParam) search(queryParam);
+-  }, [queryParam]);
++    if (queryParam) search(queryParam, { genre: genreParam, year: yearParam });
++  }, [queryParam, genreParam, yearParam]);
+ 
+   return (
+     <AppShell>
+@@ -45,6 +52,9 @@ export default function SearchPage() {
+           </div>
+         </div>
+ 
++        {/* Filtros */}
++        <SearchFilters />
++
+         {/* Resultados */}
+         <section className="space-y-8">
+           {isLoading ? (
+diff --git a/nosql_frontend/src/app/stats/page.tsx b/nosql_frontend/src/app/stats/page.tsx
+index b857a34..7f2816a 100644
+--- a/nosql_frontend/src/app/stats/page.tsx
++++ b/nosql_frontend/src/app/stats/page.tsx
+@@ -11,7 +11,11 @@ import { Card, CardContent } from '@/components/ui/card';
+ export default function StatsPage() {
+ // ...
+   const [messages, setMessages] = useState([
++<<<<<<< HEAD
++    { role: 'assistant', text: '┬íHola! Soy tu asistente IA de SpotiAnalytics (Groq). Puedes preguntarme sobre tus canciones, realizar b├║squedas multimodales o revisar tus m├®tricas anal├¡ticas.' }
++=======
+     { role: 'assistant', text: '┬íHola! Soy tu asistente IA MelodIA. Puedes preguntarme sobre tus canciones, realizar b├║squedas multimodales o revisar tus m├®tricas anal├¡ticas.' }
++>>>>>>> d8b8bf90163fbb324cc4d24d65b7c89b4c058133
+   ]);
+   const [inputVal, setInputVal] = useState('');
+   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+diff --git a/nosql_frontend/src/components/cards/ArtistCard.tsx b/nosql_frontend/src/components/cards/ArtistCard.tsx
+index cbfdea8..780e2bf 100644
+--- a/nosql_frontend/src/components/cards/ArtistCard.tsx
++++ b/nosql_frontend/src/components/cards/ArtistCard.tsx
+@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
+ interface ArtistCardProps {
+   name: string;
+   country: string;
+-  genre: string;
++  genres: string[];
+   listeners: string;
+   imageUrl?: string;
++
++  onGenreClick?: (genre: string) => void;
+ }
+ 
+-const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genre, listeners, imageUrl }) => {
++const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genres, listeners, imageUrl, onGenreClick }) => {
+   return (
+     <Card className="flex flex-col items-center p-6 bg-white/5 border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300 group cursor-pointer hover:-translate-y-1">
+       <CardContent className="p-0 flex flex-col items-center space-y-4">
+@@ -46,9 +48,18 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genre, listeners
+           </div>
+           
+           <div className="pt-2">
+-            <Badge variant="outline" className="text-[9px] py-0 px-2 border-white/10 text-white/60 font-medium tracking-wide">
+-              {genre}
+-            </Badge>
++            <div className="flex flex-wrap justify-center gap-1 pt-2">
++              {genres?.map((g, i) => (
++                <Badge
++                  key={i}
++                  variant="outline"
++                  onClick={() => onGenreClick?.(g)} // ­ƒæê AQU├ì
++                  className="cursor-pointer text-[9px] py-0 px-2 border-white/10 text-white/60 font-medium tracking-wide hover:text-white"
++                >
++                  {g}
++                </Badge>
++              ))}
++            </div>
+           </div>
+         </div>
+ 
+diff --git a/nosql_frontend/src/components/ui/SearchFilters.tsx b/nosql_frontend/src/components/ui/SearchFilters.tsx
+new file mode 100644
+index 0000000..1730041
+--- /dev/null
++++ b/nosql_frontend/src/components/ui/SearchFilters.tsx
+@@ -0,0 +1,78 @@
++'use client';
++
++import { useRouter, useSearchParams, usePathname } from 'next/navigation';
++import { useCallback } from 'react';
++import { SlidersHorizontal } from 'lucide-react';
++
++// G├®neros
++const GENRES = ['Todos', 'Rock', 'Pop', 'Jazz', 'Clasic', 'Hip-Hop', 'Electronic', 
++                'Reggaeton', 'Metal', 'Folklore', 'House', 'Pop Latino', 'Vallenato', 'Cumbia'];
++
++// A├▒os din├ímicos
++const currentYear = new Date().getFullYear();
++const YEARS = ['Todos', ...Array.from({ length: 40 }, (_, i) => String(currentYear - i))];
++
++export default function SearchFilters() {
++  const router      = useRouter();
++  const pathname    = usePathname();
++  const searchParams = useSearchParams();
++
++  const activeGenre = searchParams.get('genre') ?? 'Todos';
++  const activeYear  = searchParams.get('year')  ?? 'Todos';
++
++  const updateFilter = useCallback((key: 'genre' | 'year', value: string) => {
++    const params = new URLSearchParams(searchParams.toString());
++    if (value === 'Todos') {
++      params.delete(key);
++    } else {
++      params.set(key, value);
++    }
++    router.push(`${pathname}?${params.toString()}`);
++  }, [router, pathname, searchParams]);
++
++  return (
++    <div className="flex flex-wrap items-start gap-6 py-3 border-y border-white/10">
++      
++      {/* ├ìcono */}
++      <div className="flex items-center gap-2 text-white/40 pt-1">
++        <SlidersHorizontal className="h-4 w-4" />
++        <span className="text-xs uppercase tracking-widest">Filtros</span>
++      </div>
++
++      {/* Filtro G├®nero ÔÇö chips */}
++      <div className="flex flex-col gap-2">
++        <span className="text-xs text-white/40 uppercase tracking-widest">G├®nero</span>
++        <div className="flex flex-wrap gap-2">
++          {GENRES.map((genre) => (
++            <button
++              key={genre}
++              onClick={() => updateFilter('genre', genre)}
++              className={`px-3 py-1 rounded-full text-sm border transition-all ${
++                activeGenre === genre
++                  ? 'bg-purple-500 border-purple-500 text-white'
++                  : 'border-white/20 text-white/60 hover:border-purple-400 hover:text-white'
++              }`}
++            >
++              {genre}
++            </button>
++          ))}
++        </div>
++      </div>
++
++      {/* Filtro A├▒o ÔÇö select */}
++      <div className="flex flex-col gap-2">
++        <span className="text-xs text-white/40 uppercase tracking-widest">A├▒o</span>
++        <select
++          value={activeYear}
++          onChange={(e) => updateFilter('year', e.target.value)}
++          className="bg-transparent border border-white/20 text-white/80 rounded-lg px-3 py-1 text-sm cursor-pointer hover:border-purple-400 focus:outline-none focus:border-purple-400"
++        >
++          {YEARS.map((year) => (
++            <option key={year} value={year} className="bg-gray-900">{year}</option>
++          ))}
++        </select>
++      </div>
++
++    </div>
++  );
++}
+\ No newline at end of file
+diff --git a/nosql_frontend/src/shared/components/forms/SearchBar.jsx b/nosql_frontend/src/shared/components/forms/SearchBar.jsx
+index 2a919c2..9459d5e 100644
+--- a/nosql_frontend/src/shared/components/forms/SearchBar.jsx
++++ b/nosql_frontend/src/shared/components/forms/SearchBar.jsx
+@@ -1,3 +1,10 @@
++// ================================================================
++// SearchBar.jsx ÔÇö Barra de b├║squeda conectada al backend RAG
++// Usa el hook useSearch para manejar estado y llamadas
++// ================================================================
++
++'use client';
++
+ import React, { useRef, useEffect } from 'react';
+ import { Search, X, Loader2 } from 'lucide-react';
+ import { Input } from '@/components/ui/input';
+@@ -51,7 +58,7 @@ const SearchBar = ({ className = '', onResults = undefined }) => {
+         />
+ 
+         {/* Filters */}
+-        <select 
++        <select
+           id="genre"
+           className="hidden md:block bg-white/5 border border-white/10 rounded-full text-white/70 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-purple-500"
+           onChange={(e) => setQuery(`${query} genero:${e.target.value}`.trim())}
+@@ -62,7 +69,7 @@ const SearchBar = ({ className = '', onResults = undefined }) => {
+           <option value="Hip-Hop" className="bg-black">Hip-Hop</option>
+           <option value="Electronic" className="bg-black">Electronic</option>
+         </select>
+-        <select 
++        <select
+           id="year"
+           className="hidden md:block bg-white/5 border border-white/10 rounded-full text-white/70 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-purple-500"
+           onChange={(e) => setQuery(`${query} a├▒o:${e.target.value}`.trim())}
+diff --git a/nosql_frontend/src/shared/hooks/useSearch.js b/nosql_frontend/src/shared/hooks/useSearch.js
+index 373f0c6..ddd6263 100644
+--- a/nosql_frontend/src/shared/hooks/useSearch.js
++++ b/nosql_frontend/src/shared/hooks/useSearch.js
+@@ -12,14 +12,20 @@ export const useSearch = () => {
+   const [isLoading, setLoading] = useState(false);
+   const [error, setError]       = useState(null);
+ 
+-  const search = useCallback(async (searchQuery) => {
++  const search = useCallback(async (searchQuery, filters = {}) => {
+     if (!searchQuery?.trim()) return;
+ 
+     setLoading(true);
+     setError(null);
+ 
+     try {
+-      const data = await searchService.search({ texto: searchQuery });
++      const payload = {
++        texto: searchQuery,
++        ...(filters.genre && { genero: filters.genre === 'Todos' ? '' : filters.genre }),
++        ...(filters.year && { anio: filters.year === 'Todos' ? '' : filters.year }),
++        ...(filters.country && { pais: filters.country })
++      };
++      const data = await searchService.search(payload);
+       setResults(data);
+     } catch (err) {
+       setError(err.message || 'Error al buscar');
+diff --git a/python_service/seed.py b/python_service/seed.py
+index f12f879..f9dc9e1 100644
+--- a/python_service/seed.py
++++ b/python_service/seed.py
+@@ -20,11 +20,19 @@ def make_oid(tipo: str, id_num: int) -> ObjectId:
+ 
+ 
+ USER_IDS = [make_oid("user", 1), make_oid("user", 2), make_oid("user", 3)]
++<<<<<<< HEAD
++ARTIST_IDS = [make_oid("artist", 1), make_oid("artist", 2), make_oid("artist", 3), make_oid("artist", 4)]
++ALBUM_IDS = [make_oid("album", i) for i in range(1, 9)]
++SONG_IDS = [make_oid("song", i) for i in range(1, 9)]
++PLAYLIST_IDS = [make_oid("playlist", i) for i in range(1, 5)]
++GENRE_IDS = [make_oid("genre", i) for i in range(1, 6)]
++=======
+ ARTIST_IDS = [make_oid("artist", i) for i in range(1, 18)]
+ ALBUM_IDS = [make_oid("album", i) for i in range(1, 28)]
+ SONG_IDS = [make_oid("song", i) for i in range(1, 23)]
+ PLAYLIST_IDS = [make_oid("playlist", i) for i in range(1, 5)]
+ GENRE_IDS = [make_oid("genre", i) for i in range(1, 14)]
++>>>>>>> d8b8bf90163fbb324cc4d24d65b7c89b4c058133
+ REVIEW_IDS = [make_oid("review", i) for i in range(1, 5)]
+ EVAL_IDS = [make_oid("eval", i) for i in range(1, 3)]
+ 
+@@ -36,6 +44,46 @@ EMOCIONES_POR_CANCION = {
+     4: ["melancol├¡a", "asombro"],
+     5: ["ternura", "melancol├¡a"],
+     6: ["euforia", "alegr├¡a"],
++<<<<<<< HEAD
++    7: ["alegr├¡a", "nostalgia", "esperanza"]
++}
++
++RAW_GENRES = [
++    {"_id": GENRE_IDS[0], "nombre": "rock", "descripcion": "G├®nero musical con ra├¡ces en el rock and roll de los a├▒os 50"},
++    {"_id": GENRE_IDS[1], "nombre": "jazz", "descripcion": "G├®nero musical originado en las comunidades afroamericanas de Nueva Orleans"},
++    {"_id": GENRE_IDS[2], "nombre": "electronic", "descripcion": "M├║sica producida con instrumentos electr├│nicos y tecnolog├¡a digital"},
++    {"_id": GENRE_IDS[3], "nombre": "art rock", "descripcion": "Subg├®nero del rock con influencias de la m├║sica experimental y vanguardista"},
++    {"_id": GENRE_IDS[4], "nombre": "house", "descripcion": "G├®nero de m├║sica electr├│nica bailable originado en Chicago"}
++]
++
++RAW_ARTISTS = [
++    {"_id": ARTIST_IDS[0], "nombre": "The Velvet Underground", "pais": "USA", "generos": ["rock", "art rock"], "fecha_formacion": datetime(1964, 1, 1), "descripcion": "Banda influyente de Nueva York, pioneros del art rock con Lou Reed."},
++    {"_id": ARTIST_IDS[1], "nombre": "Miles Davis", "pais": "USA", "generos": ["jazz", "bebop"], "fecha_formacion": datetime(1944, 1, 1), "descripcion": "Trompetista legendario, figura clave en la historia del jazz."},
++    {"_id": ARTIST_IDS[2], "nombre": "Bj├Ârk", "pais": "Iceland", "generos": ["electronic", "experimental"], "fecha_formacion": datetime(1977, 1, 1), "descripcion": "Cantante y productora islandesa conocida por su estilo ecl├®ctico y vanguardista."},
++    {"_id": ARTIST_IDS[3], "nombre": "Daft Punk", "pais": "France", "generos": ["electronic", "house"], "fecha_formacion": datetime(1993, 1, 1), "descripcion": "D├║o franc├®s pionero del french house y la m├║sica electr├│nica."}
++]
++
++RAW_ALBUMS = [
++    {"_id": ALBUM_IDS[0], "id_artista": ARTIST_IDS[0], "titulo": "The Velvet Underground & Nico", "anio_lanzamiento": 1967, "tipo": "album"},
++    {"_id": ALBUM_IDS[1], "id_artista": ARTIST_IDS[0], "titulo": "White Light/White Heat", "anio_lanzamiento": 1968, "tipo": "album"},
++    {"_id": ALBUM_IDS[2], "id_artista": ARTIST_IDS[1], "titulo": "Kind of Blue", "anio_lanzamiento": 1959, "tipo": "album"},
++    {"_id": ALBUM_IDS[3], "id_artista": ARTIST_IDS[1], "titulo": "Bitches Brew", "anio_lanzamiento": 1970, "tipo": "album"},
++    {"_id": ALBUM_IDS[4], "id_artista": ARTIST_IDS[2], "titulo": "Homogenic", "anio_lanzamiento": 1997, "tipo": "album"},
++    {"_id": ALBUM_IDS[5], "id_artista": ARTIST_IDS[2], "titulo": "Vespertine", "anio_lanzamiento": 2001, "tipo": "album"},
++    {"_id": ALBUM_IDS[6], "id_artista": ARTIST_IDS[3], "titulo": "Discovery", "anio_lanzamiento": 2001, "tipo": "album"},
++    {"_id": ALBUM_IDS[7], "id_artista": ARTIST_IDS[3], "titulo": "Random Access Memories", "anio_lanzamiento": 2013, "tipo": "album"}
++]
++
++RAW_SONGS = [
++    {"_id": SONG_IDS[0], "id_artista": ARTIST_IDS[0], "id_album": ALBUM_IDS[0], "titulo": "Sunday Morning", "duracion": 174, "genero": "rock", "idioma": "en", "letra": "Sunday morning, praise the dawning It's just a restless feeling by my side Early dawning, Sunday morning It's just the wasted years so close behind"},
++    {"_id": SONG_IDS[1], "id_artista": ARTIST_IDS[0], "id_album": ALBUM_IDS[1], "titulo": "White Light/White Heat", "duracion": 167, "genero": "rock", "idioma": "en", "letra": "White light, White light goin' messin' up my mind White light, and don't you know its gonna make me go blind White heat, aww white heat it tickle me down to my toes"},
++    {"_id": SONG_IDS[2], "id_artista": ARTIST_IDS[1], "id_album": ALBUM_IDS[2], "titulo": "So What", "duracion": 562, "genero": "jazz", "idioma": "en", "letra": "[Instrumental]"},
++    {"_id": SONG_IDS[3], "id_artista": ARTIST_IDS[1], "id_album": ALBUM_IDS[3], "titulo": "Miles Runs the Voodoo Down", "duracion": 843, "genero": "jazz", "idioma": "en", "letra": "[Instrumental]"},
++    {"_id": SONG_IDS[4], "id_artista": ARTIST_IDS[2], "id_album": ALBUM_IDS[4], "titulo": "J├│ga", "duracion": 305, "genero": "electronic", "idioma": "en", "letra": "All these accidents that happen Follow the dot Coincidence makes sense Only with you You don't have to speak I feel Emotional landscapes They puzzle me"},
++    {"_id": SONG_IDS[5], "id_artista": ARTIST_IDS[2], "id_album": ALBUM_IDS[5], "titulo": "Hidden Place", "duracion": 328, "genero": "electronic", "idioma": "en", "letra": "Through the warmst cord of care Your love was sent to me I'm not sure what to do with it Or where to put it I'm so close to tears"},
++    {"_id": SONG_IDS[6], "id_artista": ARTIST_IDS[3], "id_album": ALBUM_IDS[6], "titulo": "One More Time", "duracion": 320, "genero": "electronic", "idioma": "en", "letra": "One more time, we're gonna celebrate Oh yeah, all right, don't stop the dancing Music's got me feeling so free We're gonna celebrate"},
++    {"_id": SONG_IDS[7], "id_artista": ARTIST_IDS[3], "id_album": ALBUM_IDS[7], "titulo": "Get Lucky", "duracion": 369, "genero": "electronic", "idioma": "en", "letra": "Like the legend of the phoenix All ends with beginnings What keeps the planet spinning The force from the beginning We've come too far to give up who we are So let's raise the bar and our cups to the stars"}
++=======
+     7: ["alegr├¡a", "nostalgia", "esperanza"],
+     # Nuevas canciones
+     8:  ["nostalgia", "melancol├¡a"],        # Carlos Vives - La Bicicleta
+@@ -159,6 +207,7 @@ RAW_SONGS = [
+     {"_id": SONG_IDS[19], "id_artista": ARTIST_IDS[15], "id_album": ALBUM_IDS[25], "titulo": "Matador", "duracion": 272, "genero": "ska", "idioma": "es", "letra": "Viene el le├│n, viene agazapado. Matador, oh, Matador"},
+     {"_id": SONG_IDS[20], "id_artista": ARTIST_IDS[5], "id_album": ALBUM_IDS[10], "titulo": "La Tortura", "duracion": 213, "genero": "pop latino", "idioma": "es", "letra": "Ay, no hay que llorar sobre la mala suerte, qu├® le vamos a hacer"},
+     {"_id": SONG_IDS[21], "id_artista": ARTIST_IDS[9], "id_album": ALBUM_IDS[16], "titulo": "Fuego", "duracion": 252, "genero": "electro-cumbia", "idioma": "es", "letra": "Fuego, mantenlo prendido, fuego, no lo dejes apagar"},
++>>>>>>> d8b8bf90163fbb324cc4d24d65b7c89b4c058133
+ ]
+ 
+ RAW_USERS = [
+@@ -167,6 +216,10 @@ RAW_USERS = [
+     {"_id": USER_IDS[2], "nombre": "Alex Ostrer", "correo": "alex@example.com", "plan_suscripcion": "premium"}
+ ]
+ 
++<<<<<<< HEAD
++
++=======
++>>>>>>> d8b8bf90163fbb324cc4d24d65b7c89b4c058133
+ def main():
+     print("=" * 60)
+     print("SEED ÔÇö 11 colecciones")
