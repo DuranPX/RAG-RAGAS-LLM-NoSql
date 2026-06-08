@@ -378,6 +378,35 @@ db.createCollection("evaluaciones", {
 db.evaluaciones.createIndex({ id_consulta: 1 }, { name: "idx_evaluacion_consulta" });
 db.evaluaciones.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluacion_fecha" });
 
+// 11b. evaluaciones_ragas (RAGAS agregada)
+db.createCollection("evaluaciones_ragas", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["fecha_evaluacion", "modelo_evaluado", "total_consultas", "metricas"],
+      properties: {
+        fecha_evaluacion: { bsonType: "date" },
+        modelo_evaluado: { bsonType: "string" },
+        total_consultas: { bsonType: "int" },
+        metricas: {
+          bsonType: "object",
+          properties: {
+            faithfulness: { bsonType: ["double", "null"] },
+            answer_relevancy: { bsonType: ["double", "null"] },
+            context_precision: { bsonType: ["double", "null"] },
+            context_recall: { bsonType: ["double", "null"] }
+          }
+        },
+        error: { bsonType: ["string", "null"] }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+
+db.evaluaciones_ragas.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluaciones_ragas_fecha" });
+
 // ====== Índices Vectoriales (Atlas Search) ======
 print("\n--- Solicitando creación de Índices de Vector Search en Atlas ---");
 try {

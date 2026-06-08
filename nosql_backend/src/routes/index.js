@@ -279,4 +279,8 @@ router.get("/health", (_, res) => res.json({ status: "ok" }));
 
 router.use("/rag", ragRoutes);
 
+// EVALUATION RAGAS
+const evaluationRoutes = require("./evaluation");
+router.use("/evaluation", evaluationRoutes);
+
 module.exports = router;
