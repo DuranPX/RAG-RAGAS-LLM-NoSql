@@ -83,6 +83,16 @@ const SongModel = {
     return col.find(filter, options).toArray();
   },
 
+  findExactTitle: async (title) => {
+    if (!title || typeof title !== 'string') return null;
+    const col = getCollection();
+    const textRegex = new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+
+    return col.findOne({
+      titulo: textRegex
+    });
+  },
+
   updateById: async (id, update) => {
     const col = getCollection();
     return col.updateOne(
@@ -118,6 +128,90 @@ const SongModel = {
         }
       }
     ]).toArray();
+  },
+
+  searchByMetadata: async (query, limit = 5) => {
+    const col = getCollection();
+
+    try {
+      return col.aggregate([
+        {
+          $search: {
+            compound: {
+              should: [
+                {
+                  phrase: {
+                    query,
+                    path: 'titulo',
+                    score: { boost: { value: 6 } }
+                  }
+                },
+                {
+                  text: {
+                    query,
+                    path: 'titulo',
+                    score: { boost: { value: 3 } }
+                  }
+                },
+                {
+                  text: {
+                    query,
+                    path: 'artista.nombre',
+                    score: { boost: { value: 3 } }
+                  }
+                },
+                {
+                  text: {
+                    query,
+                    path: 'album.titulo',
+                    score: { boost: { value: 3 } }
+                  }
+                },
+                {
+                  text: {
+                    query,
+                    path: 'genero',
+                    score: { boost: { value: 1 } }
+                  }
+                }
+              ],
+              minimumShouldMatch: 1
+            }
+          }
+        },
+        {
+          $addFields: {
+            score: { $meta: 'searchScore' }
+          }
+        },
+        {
+          $sort: { score: -1 }
+        },
+        {
+          $project: {
+            _id: 1,
+            titulo: 1,
+            genero: 1,
+            artista: 1,
+            album: 1,
+            score: 1
+          }
+        },
+        {
+          $limit: limit
+        }
+      ]).toArray();
+    } catch (error) {
+      const textRegex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      return col.find({
+        $or: [
+          { titulo: textRegex },
+          { 'artista.nombre': textRegex },
+          { 'album.titulo': textRegex },
+          { genero: textRegex }
+        ]
+      }).project({ _id: 1, titulo: 1, genero: 1, artista: 1, album: 1 }).limit(limit).toArray();
+    }
   }
 };
 

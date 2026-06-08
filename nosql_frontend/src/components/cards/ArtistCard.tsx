@@ -22,20 +22,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genres, listener
       <CardContent className="p-0 flex flex-col items-center space-y-4">
         {/* Circular Image */}
         <div className="relative group-hover:scale-105 transition-transform duration-300">
-          <Avatar className="h-24 w-24 border-2 border-purple-500/20 group-hover:border-purple-500 transition-colors shadow-xl">
-            {imageUrl ? (
-              <AvatarImage src={imageUrl} alt={name} className="object-cover" />
-            ) : (
-              <AvatarImage src="" />
-            )}
-            <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-500 text-white font-bold text-2xl">
-              {name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          {/* TODO: artist photo */}
-          <div className="absolute -bottom-1 -right-1 bg-purple-600 rounded-full p-1.5 shadow-lg border-2 border-[#1a1a2e]">
-            <Music2 className="h-3 w-3 text-white" />
-          </div>
         </div>
 
         {/* Text Info */}
@@ -61,12 +47,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ name, country, genres, listener
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Listeners */}
-        <div className="flex items-center gap-2 pt-2 text-purple-400/80 group-hover:text-purple-400 transition-colors">
-          <Headphones className="h-4 w-4" />
-          <span className="text-xs font-bold">{listeners} oyentes</span>
         </div>
       </CardContent>
     </Card>

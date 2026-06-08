@@ -12,17 +12,19 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { usePathname } from 'next/navigation';
 import SearchBar from '@/shared/components/forms/SearchBar';
+import { usePathname, useRouter } from 'next/navigation';
 
 const Header = () => {
   const pathname = usePathname();
   const pageName = pathname.split('/').pop() || 'Dashboard';
-  const formattedPageName = pageName.charAt(0).toUpperCase() + pageName.slice(1);
+  const router = useRouter();
+  const formattedPageName = pageName.charAt(0).toUpperCase() + pageName.slice(1).replace(/-/g, ' ');
 
   return (
     <header className="fixed top-0 right-0 left-[280px] h-16 bg-[#0d0d18]/80 backdrop-blur-md border-b border-white/10 flex items-center px-8 justify-between z-40">
       {/* Breadcrumbs */}
+    
       <div className="flex-1">
         <Breadcrumb>
           <BreadcrumbList>
@@ -47,29 +49,12 @@ const Header = () => {
           variant="outline"
           size="sm"
           className="hidden lg:flex items-center gap-2 border-amber-500/50 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 hover:text-amber-300 rounded-full text-xs font-bold animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-          onClick={() => console.log('RAGAS Panel Placeholder')}
+          onClick={() => router.push('/evaluation')}
         >
           <FlaskConical className="h-3 w-3" />
           {/* TODO: open RAGAS panel */}
           RAGAS Experimental
         </Button>
-
-        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full border-2 border-[#0d0d18]"></span>
-        </Button>
-
-        <div className="flex items-center gap-3 ml-2 cursor-pointer group">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">Juan Duran</p>
-            <p className="text-[10px] text-white/40">Premium</p>
-          </div>
-          <Avatar className="h-9 w-9 border-2 border-purple-500/50 group-hover:border-purple-400 transition-all">
-            <AvatarImage src="" />
-            <AvatarFallback className="bg-purple-600 text-white font-bold text-xs">JD</AvatarFallback>
-            {/* TODO: user avatar image */}
-          </Avatar>
-        </div>
       </div>
     </header>
   );

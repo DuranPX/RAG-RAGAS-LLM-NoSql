@@ -1,0 +1,82 @@
+[
+  {
+    "question": "¿Quién interpreta De Música Ligera?",
+    "ground_truth": "De Música Ligera es interpretada por Soda Stereo."
+  },
+  {
+    "question": "¿Quién interpreta La Tortura?",
+    "ground_truth": "La Tortura es interpretada por Shakira."
+  },
+  {
+    "question": "¿Quién interpreta Bolero Falaz?",
+    "ground_truth": "Bolero Falaz es interpretada por Aterciopelados."
+  },
+  {
+    "question": "¿Quién interpreta Al Otro Lado del Río?",
+    "ground_truth": "Al Otro Lado del Río es interpretada por Jorge Drexler."
+  },
+  {
+    "question": "¿Quién interpreta De Donde Vengo Yo?",
+    "ground_truth": "De Donde Vengo Yo es interpretada por ChocQuibTown."
+  },
+  {
+    "question": "¿Quién interpreta Todo Cambia?",
+    "ground_truth": "Todo Cambia es interpretada por Mercedes Sosa."
+  },
+  {
+    "question": "¿Quién interpreta El Amor Después del Amor?",
+    "ground_truth": "El Amor Después del Amor es interpretada por Fito Páez."
+  },
+  {
+    "question": "¿A qué álbum pertenece La Tortura?",
+    "ground_truth": "La Tortura pertenece al álbum Fijación Oral Vol. 1."
+  },
+  {
+    "question": "¿Quién lanzó el álbum El Dorado?",
+    "ground_truth": "El Dorado fue lanzado por Shakira."
+  },
+  {
+    "question": "¿Quién lanzó el álbum Fíjate Bien?",
+    "ground_truth": "Fíjate Bien fue lanzado por Juanes."
+  },
+  {
+    "question": "¿Quién lanzó Honestidad Brutal?",
+    "ground_truth": "Honestidad Brutal fue lanzado por Andrés Calamaro."
+  },
+  {
+    "question": "¿Qué artista está asociado con El Dorado?",
+    "ground_truth": "El Dorado está asociado con Shakira."
+  },
+  {
+    "question": "¿Qué artista interpreta canciones de rock latino como De Música Ligera?",
+    "ground_truth": "De Música Ligera es interpretada por Soda Stereo."
+  },
+  {
+    "question": "¿Qué artista interpreta música folclórica como Todo Cambia?",
+    "ground_truth": "Todo Cambia es interpretada por Mercedes Sosa."
+  },
+  {
+    "question": "¿Qué artista interpreta Al Otro Lado del Río?",
+    "ground_truth": "Al Otro Lado del Río es interpretada por Jorge Drexler."
+  },
+  {
+    "question": "¿Quién interpreta canciones del álbum El Dorado?",
+    "ground_truth": "Las canciones del álbum El Dorado pertenecen a Shakira."
+  },
+  {
+    "question": "¿Qué álbum está relacionado con Shakira?",
+    "ground_truth": "El Dorado es un álbum de Shakira."
+  },
+  {
+    "question": "¿Qué artista está asociado con Honestidad Brutal?",
+    "ground_truth": "Honestidad Brutal está asociado con Andrés Calamaro."
+  },
+  {
+    "question": "¿Quién interpreta música de ChocQuibTown?",
+    "ground_truth": "ChocQuibTown interpreta De Donde Vengo Yo."
+  },
+  {
+    "question": "¿Quién interpreta canciones de Soda Stereo?",
+    "ground_truth": "Soda Stereo interpreta De Música Ligera."
+  }
+]
