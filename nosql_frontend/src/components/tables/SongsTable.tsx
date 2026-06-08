@@ -41,8 +41,6 @@ const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider hidden md:table-cell">Álbum</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider hidden lg:table-cell">Género</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Duración</TableHead>
-            <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Popularidad</TableHead>
-            <TableHead className="text-right text-white/40 text-[10px] font-bold uppercase tracking-wider">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -80,24 +78,6 @@ const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
               </TableCell>
               <TableCell className="text-white/60 text-xs font-mono">
                 {song.duration}
-              </TableCell>
-              <TableCell>
-                <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full" 
-                    style={{ width: `${song.popularity}%` }}
-                  />
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-pink-500">
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
               </TableCell>
             </TableRow>
           ))}

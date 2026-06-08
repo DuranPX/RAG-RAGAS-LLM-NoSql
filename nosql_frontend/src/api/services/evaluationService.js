@@ -1,6 +1,6 @@
-import axiosInstance from '@/api/axiosInterceptor';
+import api from '@/api/api';
 
-const API_BASE = '/api/evaluation';
+const API_BASE = '/evaluation';
 
 export const evaluationService = {
   /**
@@ -8,7 +8,7 @@ export const evaluationService = {
    */
   async runEvaluation() {
     try {
-      const response = await axiosInstance.post(`${API_BASE}/run`);
+      const response = await api.post(`${API_BASE}/run`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -20,19 +20,7 @@ export const evaluationService = {
    */
   async getResults() {
     try {
-      const response = await axiosInstance.get(`${API_BASE}/results`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
-   * Obtiene los detalles de una evaluación específica
-   */
-  async getEvaluationDetails(evaluationId) {
-    try {
-      const response = await axiosInstance.get(`${API_BASE}/results/${evaluationId}`);
+      const response = await api.get(`${API_BASE}/results`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -44,7 +32,7 @@ export const evaluationService = {
    */
   async getSummary() {
     try {
-      const response = await axiosInstance.get(`${API_BASE}/summary`);
+      const response = await api.get(`${API_BASE}/summary`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

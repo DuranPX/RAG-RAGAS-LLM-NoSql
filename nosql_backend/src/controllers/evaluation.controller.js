@@ -174,6 +174,9 @@ async function obtenerDetallesEvaluacion(id_evaluacion) {
 /**
  * Obtiene un resumen estadístico de todas las evaluaciones
  */
+/**
+ * Obtiene un resumen estadístico de todas las evaluaciones
+ */
 async function obtenerResumenEvaluaciones() {
   try {
     console.log('[EVALUATION] Calculando resumen de evaluaciones...');
@@ -181,56 +184,107 @@ async function obtenerResumenEvaluaciones() {
     const db = getDB();
     const evaluaciones = db.collection('evaluaciones_ragas');
 
-    // Estadísticas de las evaluaciones exitosas
-    const stats = await evaluaciones
-      .aggregate([
-        {
-          $match: { metricas: { $ne: null } }
-        },
-        {
-          $group: {
-            _id: null,
-            total_evaluaciones: { $sum: 1 },
-            faithfulness_promedio: { $avg: '$metricas.faithfulness' },
-            answer_relevancy_promedio: { $avg: '$metricas.answer_relevancy' },
-            context_precision_promedio: { $avg: '$metricas.context_precision' },
-            context_recall_promedio: { $avg: '$metricas.context_recall' },
-            total_consultas: { $sum: '$total_consultas' },
-            ultima_evaluacion: { $max: '$fecha_evaluacion' }
+    const stats = await evaluaciones.aggregate([
+      {
+        $match: {
+          metricas: { $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+
+          total_evaluaciones: {
+            $sum: 1
+          },
+
+          total_consultas: {
+            $sum: '$total_consultas'
+          },
+
+          ultima_evaluacion: {
+            $max: '$fecha_evaluacion'
+          },
+
+          answer_relevancy_promedio: {
+            $avg: '$metricas.answer_relevancy'
+          },
+
+          retrieval_hit_rate_promedio: {
+            $avg: '$metricas.retrieval_hit_rate'
+          },
+
+          retrieval_mrr_promedio: {
+            $avg: '$metricas.retrieval_mrr'
+          },
+
+          retrieval_precision_at_k_promedio: {
+            $avg: '$metricas.retrieval_precision_at_k'
+          },
+
+          retrieval_recall_at_k_promedio: {
+            $avg: '$metricas.retrieval_recall_at_k'
           }
         }
-      ])
-      .toArray();
+      }
+    ]).toArray();
 
-    const resumen = stats.length > 0 ? stats[0] : {
-      total_evaluaciones: 0,
-      faithfulness_promedio: 0,
-      answer_relevancy_promedio: 0,
-      context_precision_promedio: 0,
-      context_recall_promedio: 0,
-      total_consultas: 0,
-      ultima_evaluacion: null
-    };
+    const resumen = stats.length > 0
+      ? stats[0]
+      : {
+          total_evaluaciones: 0,
+          total_consultas: 0,
+          ultima_evaluacion: null,
+
+          answer_relevancy_promedio: 0,
+          retrieval_hit_rate_promedio: 0,
+          retrieval_mrr_promedio: 0,
+          retrieval_precision_at_k_promedio: 0,
+          retrieval_recall_at_k_promedio: 0
+        };
 
     return {
       status: 'success',
       resumen: {
         total_evaluaciones: resumen.total_evaluaciones,
+
         metricas_promedio: {
-          faithfulness: parseFloat((resumen.faithfulness_promedio || 0).toFixed(4)),
-          answer_relevancy: parseFloat((resumen.answer_relevancy_promedio || 0).toFixed(4)),
-          context_precision: parseFloat((resumen.context_precision_promedio || 0).toFixed(4)),
-          context_recall: parseFloat((resumen.context_recall_promedio || 0).toFixed(4))
+          answer_relevancy: Number(
+            (resumen.answer_relevancy_promedio || 0).toFixed(4)
+          ),
+
+          retrieval_hit_rate: Number(
+            (resumen.retrieval_hit_rate_promedio || 0).toFixed(4)
+          ),
+
+          retrieval_mrr: Number(
+            (resumen.retrieval_mrr_promedio || 0).toFixed(4)
+          ),
+
+          retrieval_precision_at_k: Number(
+            (resumen.retrieval_precision_at_k_promedio || 0).toFixed(4)
+          ),
+
+          retrieval_recall_at_k: Number(
+            (resumen.retrieval_recall_at_k_promedio || 0).toFixed(4)
+          )
         },
+
         total_consultas_evaluadas: resumen.total_consultas,
         ultima_evaluacion: resumen.ultima_evaluacion
       }
     };
   } catch (error) {
-    console.error('[EVALUATION] Error calculando resumen:', error.message);
+    console.error(
+      '[EVALUATION] Error calculando resumen:',
+      error.message
+    );
+
     throw {
       status: 500,
-      errores: [`Error calculando resumen: ${error.message}`]
+      errores: [
+        `Error calculando resumen: ${error.message}`
+      ]
     };
   }
 }

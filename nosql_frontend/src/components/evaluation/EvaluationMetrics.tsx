@@ -26,19 +26,33 @@ export default function EvaluationMetrics({ summary }) {
       <h2 className="text-xl font-bold text-white mb-6">Métricas Promedio</h2>
 
       <MetricCard
-        label="Faithfulness"
-        value={metrics.faithfulness}
-        icon="📊"
-      />
-      <MetricCard
-        label="Answer Relevancy"
+        label="Calidad de Respuesta"
         value={metrics.answer_relevancy}
-        icon="🎯"
+        icon=""
       />
+
       <MetricCard
-        label="Context Recall"
-        value={metrics.context_recall}
-        icon="🔍"
+        label="Tasa de Acierto"
+        value={metrics.retrieval_hit_rate}
+        icon=""
+      />
+
+      <MetricCard
+        label="Ranking Promedio (MRR)"
+        value={metrics.retrieval_mrr}
+        icon=""
+      />
+
+      <MetricCard
+        label="Precisión Recuperación"
+        value={metrics.retrieval_precision_at_k}
+        icon=""
+      />
+
+      <MetricCard
+        label="Cobertura Recuperación"
+        value={metrics.retrieval_recall_at_k}
+        icon=""
       />
 
       <div className="border-t border-slate-700 pt-4 mt-4">

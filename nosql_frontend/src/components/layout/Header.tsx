@@ -55,23 +55,6 @@ const Header = () => {
           {/* TODO: open RAGAS panel */}
           RAGAS Experimental
         </Button>
-
-        <Button variant="ghost" size="icon" className="text-white/60 hover:text-white relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full border-2 border-[#0d0d18]"></span>
-        </Button>
-
-        <div className="flex items-center gap-3 ml-2 cursor-pointer group">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white group-hover:text-purple-400 transition-colors">Juan Duran</p>
-            <p className="text-[10px] text-white/40">Premium</p>
-          </div>
-          <Avatar className="h-9 w-9 border-2 border-purple-500/50 group-hover:border-purple-400 transition-all">
-            <AvatarImage src="" />
-            <AvatarFallback className="bg-purple-600 text-white font-bold text-xs">JD</AvatarFallback>
-            {/* TODO: user avatar image */}
-          </Avatar>
-        </div>
       </div>
     </header>
   );

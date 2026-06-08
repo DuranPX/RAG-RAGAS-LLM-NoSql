@@ -51,7 +51,7 @@ export default function EvaluationHistory({ results, onRefresh }) {
           onClick={onRefresh}
           className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-1"
         >
-          🔄 Actualizar
+          Actualizar
         </Button>
       </div>
 
@@ -68,9 +68,6 @@ export default function EvaluationHistory({ results, onRefresh }) {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-lg">
-                      {result.metricas ? '✓' : '⚠️'}
-                    </span>
                     <div>
                       <p className="font-semibold text-white">
                         {new Date(result.fecha_evaluacion).toLocaleString('es-ES')}
@@ -85,9 +82,9 @@ export default function EvaluationHistory({ results, onRefresh }) {
                 {result.metricas && (
                   <div className="flex gap-6 text-right">
                     <div>
-                      <p className="text-xs text-slate-400">Faithfulness</p>
+                      <p className="text-xs text-slate-400">Retrieval</p>
                       <p className="font-bold text-green-400">
-                        {(result.metricas.faithfulness * 100).toFixed(1)}%
+                        {(result.metricas.retrieval_mrr * 100).toFixed(1)}%
                       </p>
                     </div>
                     <div>
@@ -97,9 +94,9 @@ export default function EvaluationHistory({ results, onRefresh }) {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Context Recall</p>
+                      <p className="text-xs text-slate-400">retieval Presicion</p>
                       <p className="font-bold text-purple-400">
-                        {(result.metricas.context_recall * 100).toFixed(1)}%
+                        {(result.metricas.retrieval_precision_at_k * 100).toFixed(1)}%
                       </p>
                     </div>
                   </div>
