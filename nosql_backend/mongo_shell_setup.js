@@ -1,4 +1,3 @@
-
 use("spotifyRAG");
 
 // 1. usuarios
@@ -25,7 +24,7 @@ db.createCollection("usuarios", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.usuarios.createIndex({ correo: 1 }, { unique: true, name: "idx_correo_unico" });
@@ -44,12 +43,13 @@ db.createCollection("artistas", {
         descripcion: { bsonType: ["string", "null"] },
         generos: { bsonType: "array", items: { bsonType: "string" } },
         emb_descripcion: { bsonType: ["array", "null"] },
+        modelo_embedding: { bsonType: ["string", "null"] },
         fecha_formacion: { bsonType: ["date", "null"] }
       }
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.artistas.createIndex({ nombre: 1 }, { name: "idx_artista_nombre" });
@@ -72,14 +72,15 @@ db.createCollection("albums", {
           properties: {
             url: { bsonType: "string" },
             descripcion: { bsonType: ["string", "null"] },
-            emb_imagen: { bsonType: ["array", "null"] }
+            emb_imagen: { bsonType: ["array", "null"] },
+            modelo_embedding: { bsonType: ["string", "null"] }
           }
         }
       }
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.albums.createIndex({ id_artista: 1 }, { name: "idx_album_artista" });
@@ -99,7 +100,7 @@ db.createCollection("generos", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.generos.createIndex({ nombre: 1 }, { unique: true, name: "idx_genero_nombre_unico" });
@@ -118,6 +119,7 @@ db.createCollection("canciones", {
           minItems: 384, maxItems: 384,
           items: { bsonType: "double" }
         },
+        modelo_embedding: { bsonType: ["string", "null"] },
         duracion: { bsonType: "number", minimum: 1 },
         genero: { bsonType: "string" },
         id_genero: { bsonType: ["objectId", "null"] },
@@ -147,7 +149,7 @@ db.createCollection("canciones", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.canciones.createIndex({ genero: 1 }, { name: "idx_cancion_genero" });
@@ -155,6 +157,10 @@ db.canciones.createIndex({ id_artista: 1 }, { name: "idx_cancion_artista" });
 db.canciones.createIndex({ id_album: 1 }, { name: "idx_cancion_album" });
 db.canciones.createIndex({ titulo: "text", letra: "text" }, { name: "idx_cancion_texto" });
 db.canciones.createIndex({ "artista.nombre": 1 }, { name: "idx_cancion_nombre_artista" });
+
+// Índice compuesto explícito
+db.canciones.createIndex({ idioma: 1, genero: 1 }, { name: "idx_cancion_idioma_genero" });
+
 
 // 6. playlists
 db.createCollection("playlists", {
@@ -193,7 +199,7 @@ db.createCollection("playlists", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.playlists.createIndex({ id_usuario: 1 }, { name: "idx_playlist_usuario" });
@@ -233,7 +239,7 @@ db.createCollection("eventos", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.eventos.createIndex({ id_usuario: 1, fecha_evento: -1 }, { name: "idx_evento_usuario_fecha" });
@@ -277,19 +283,27 @@ db.createCollection("consultas", {
             texto: { bsonType: "string" },
             modelo_usado: { bsonType: "string" },
             fecha_generacion: { bsonType: "date" },
-            chunks_usados: { bsonType: "array", items: { bsonType: "objectId" } }
+            chunks_usados: { bsonType: "array", items: { bsonType: "objectId" } },
+            // Auditoría RAG: permite reconstruir exactamente qué vio
+            // el LLM en cada inferencia y medir el costo de contexto.
+            prompt_enviado:     { bsonType: ["string", "null"] },
+            contexto_utilizado: { bsonType: ["string", "null"] },
+            tokens_contexto:    { bsonType: ["int", "null"], minimum: 0 }
           }
         }
       }
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.consultas.createIndex({ id_usuario: 1, fecha: -1 }, { name: "idx_consulta_usuario_fecha" });
 db.consultas.createIndex({ fecha: -1 }, { name: "idx_consulta_fecha" });
 db.consultas.createIndex({ texto_pregunta: "text" }, { name: "idx_consulta_texto" });
+// Índice compuesto explícito
+// Soporta búsquedas históricas filtradas por fecha y tipo en una sola pasada.
+db.consultas.createIndex({ fecha: -1, tipo_consulta: 1 }, { name: "idx_consulta_fecha_tipo" });
 
 // 9. resenas (polimorfica)
 db.createCollection("resenas", {
@@ -309,7 +323,7 @@ db.createCollection("resenas", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.resenas.createIndex({ id_usuario: 1 }, { name: "idx_resena_usuario" });
@@ -335,13 +349,14 @@ db.createCollection("chunks", {
           items: { bsonType: "double" }
         },
         modelo: { bsonType: "string" },
+        modelo_embedding: { bsonType: ["string", "null"] },
         fecha_ingesta: { bsonType: "date" },
         metadata: { bsonType: ["object", "null"] }
       }
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.chunks.createIndex({ doc_id: 1, chunk_index: 1 }, { name: "idx_chunk_doc_index" });
@@ -349,7 +364,33 @@ db.chunks.createIndex({ tipo_fuente: 1 }, { name: "idx_chunk_tipo_fuente" });
 db.chunks.createIndex({ estrategia_chunking: 1 }, { name: "idx_chunk_estrategia" });
 db.chunks.createIndex({ doc_id: 1, estrategia_chunking: 1 }, { name: "idx_chunk_doc_estrategia" });
 
-// 11. evaluaciones (RAGAS)
+// 11. chunking_experiments
+// Almacena los resultados de cada experimento de chunking para poder
+// comparar estrategias (fixed-size vs sentence-aware vs semantic) de forma
+// cuantitativa. Cada documento representa una corrida de experimento.
+db.createCollection("chunking_experiments", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["consulta", "estrategia", "fecha"],
+      properties: {
+        consulta:           { bsonType: "string" },
+        estrategia:         { bsonType: "string", enum: ["fixed-size", "sentence-aware", "semantic"] },
+        chunks_recuperados: { bsonType: ["int", "null"], minimum: 0 },
+        longitud_promedio:  { bsonType: ["double", "null"] },
+        score_relevancia:   { bsonType: ["double", "null"], minimum: 0, maximum: 1 },
+        fecha:              { bsonType: "date" }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "error"
+});
+
+db.chunking_experiments.createIndex({ estrategia: 1, fecha: -1 }, { name: "idx_exp_estrategia_fecha" });
+db.chunking_experiments.createIndex({ score_relevancia: -1 },      { name: "idx_exp_score" });
+
+// 12. evaluaciones (RAGAS)
 db.createCollection("evaluaciones", {
   validator: {
     $jsonSchema: {
@@ -372,7 +413,7 @@ db.createCollection("evaluaciones", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 
 db.evaluaciones.createIndex({ id_consulta: 1 }, { name: "idx_evaluacion_consulta" });
@@ -429,9 +470,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_emb_letra (canciones)");
+  print("Solicitado vector_idx_emb_letra (canciones)");
 } catch(e) {
-  print("X Error vector_idx_emb_letra:", e.message);
+  print("Error vector_idx_emb_letra:", e.message);
 }
 
 try {
@@ -454,9 +495,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_embedding_chunks (chunks)");
+  print("Solicitado vector_idx_embedding_chunks (chunks)");
 } catch(e) {
-  print("X Error vector_idx_embedding_chunks:", e.message);
+  print("Error vector_idx_embedding_chunks:", e.message);
 }
 
 try {
@@ -479,9 +520,9 @@ try {
       }
     ]
   });
-  print("✓ Solicitado vector_idx_portada_imagen (albums)");
+  print("Solicitado vector_idx_portada_imagen (albums)");
 } catch(e) {
-  print("X Error vector_idx_portada_imagen:", e.message);
+  print("Error vector_idx_portada_imagen:", e.message);
 }
 
 // Aggregations de referencia
@@ -556,3 +597,30 @@ const resenasPorTipo = () => [
 print("\nColecciones en spotifyRAG:");
 db.getCollectionNames().forEach(c => print(" -", c));
 print("\nSetup completo");
+// 11b. evaluaciones_ragas (RAGAS agregada)
+db.createCollection("evaluaciones_ragas", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["fecha_evaluacion", "modelo_evaluado", "total_consultas", "metricas"],
+      properties: {
+        fecha_evaluacion: { bsonType: "date" },
+        modelo_evaluado: { bsonType: "string" },
+        total_consultas: { bsonType: "int" },
+        metricas: {
+          bsonType: "object",
+          properties: {
+            faithfulness: { bsonType: ["double", "null"] },
+            answer_relevancy: { bsonType: ["double", "null"] },
+            context_precision: { bsonType: ["double", "null"] },
+            context_recall: { bsonType: ["double", "null"] }
+          }
+        },
+        error: { bsonType: ["string", "null"] }
+      }
+    }
+  },
+  validationLevel: "moderate",
+  validationAction: "warn"
+});
+db.evaluaciones_ragas.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluaciones_ragas_fecha" });
