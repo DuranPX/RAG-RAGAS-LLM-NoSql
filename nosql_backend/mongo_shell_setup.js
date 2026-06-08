@@ -106,13 +106,6 @@ db.createCollection("generos", {
 db.generos.createIndex({ nombre: 1 }, { unique: true, name: "idx_genero_nombre_unico" });
 
 // 5. canciones
-// DECISIÓN DE DISEÑO (Punto 6):
-//   emb_letra  → embedding completo de la letra; usado para búsqueda semántica
-//                directa sobre la canción (vector search en colección canciones).
-//   chunks     → fragmentos de la letra con embeddings individuales; usados
-//                exclusivamente en el pipeline RAG para recuperar contexto
-//                relevante antes de invocar al LLM.
-// Ambos coexisten intencionalmente: sirven propósitos distintos y complementarios.
 db.createCollection("canciones", {
   validator: {
     $jsonSchema: {
@@ -164,9 +157,8 @@ db.canciones.createIndex({ id_artista: 1 }, { name: "idx_cancion_artista" });
 db.canciones.createIndex({ id_album: 1 }, { name: "idx_cancion_album" });
 db.canciones.createIndex({ titulo: "text", letra: "text" }, { name: "idx_cancion_texto" });
 db.canciones.createIndex({ "artista.nombre": 1 }, { name: "idx_cancion_nombre_artista" });
-// PUNTO 7 — Índice compuesto explícito (requisito académico PDF):
-// Permite filtrar canciones por idioma y género simultáneamente en una sola
-// operación de índice, más eficiente que dos índices simples independientes.
+
+// Índice compuesto explícito
 db.canciones.createIndex({ idioma: 1, genero: 1 }, { name: "idx_cancion_idioma_genero" });
 
 
@@ -292,7 +284,7 @@ db.createCollection("consultas", {
             modelo_usado: { bsonType: "string" },
             fecha_generacion: { bsonType: "date" },
             chunks_usados: { bsonType: "array", items: { bsonType: "objectId" } },
-            // PUNTO 10 — Auditoría RAG: permite reconstruir exactamente qué vio
+            // Auditoría RAG: permite reconstruir exactamente qué vio
             // el LLM en cada inferencia y medir el costo de contexto.
             prompt_enviado:     { bsonType: ["string", "null"] },
             contexto_utilizado: { bsonType: ["string", "null"] },
@@ -309,9 +301,8 @@ db.createCollection("consultas", {
 db.consultas.createIndex({ id_usuario: 1, fecha: -1 }, { name: "idx_consulta_usuario_fecha" });
 db.consultas.createIndex({ fecha: -1 }, { name: "idx_consulta_fecha" });
 db.consultas.createIndex({ texto_pregunta: "text" }, { name: "idx_consulta_texto" });
-// PUNTO 7 — Índice compuesto explícito (requisito académico PDF):
-// Soporta búsquedas históricas filtradas por fecha y tipo en una sola pasada
-// (equivalente al ejemplo { fecha:1, idioma:1 } del PDF).
+// Índice compuesto explícito
+// Soporta búsquedas históricas filtradas por fecha y tipo en una sola pasada.
 db.consultas.createIndex({ fecha: -1, tipo_consulta: 1 }, { name: "idx_consulta_fecha_tipo" });
 
 // 9. resenas (polimorfica)
@@ -373,7 +364,7 @@ db.chunks.createIndex({ tipo_fuente: 1 }, { name: "idx_chunk_tipo_fuente" });
 db.chunks.createIndex({ estrategia_chunking: 1 }, { name: "idx_chunk_estrategia" });
 db.chunks.createIndex({ doc_id: 1, estrategia_chunking: 1 }, { name: "idx_chunk_doc_estrategia" });
 
-// 11. chunking_experiments — PUNTO 8
+// 11. chunking_experiments
 // Almacena los resultados de cada experimento de chunking para poder
 // comparar estrategias (fixed-size vs sentence-aware vs semantic) de forma
 // cuantitativa. Cada documento representa una corrida de experimento.

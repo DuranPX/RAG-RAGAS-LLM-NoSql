@@ -11,7 +11,7 @@ const Sidebar = () => {
 
   const navLinks = [
     { name: 'Home', href: '/home', icon: Home },
-    { name: 'ListMusic', href: '/playlists', icon: ListMusic },
+    { name: 'Playlist', href: '/playlists', icon: ListMusic },
     { name: 'Usuarios', href: '/users', icon: Users },
     { name: 'Métricas y Estadísticas', href: '/stats', icon: BarChart2 },
   ];
