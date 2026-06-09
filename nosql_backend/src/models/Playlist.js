@@ -12,6 +12,7 @@ class Playlist {
 
   static async findByUsuario(id_usuario) {
     const { playlists } = getCollections();
+
     return playlists
       .find({ id_usuario: new ObjectId(id_usuario) })
       .sort({ fecha_creacion: -1 })

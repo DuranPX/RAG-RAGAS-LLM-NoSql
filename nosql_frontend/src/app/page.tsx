@@ -63,43 +63,18 @@ export default function LandingPage() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="h-14 px-8 rounded-full bg-white text-black hover:bg-purple-100 transition-all duration-300 font-bold text-base shadow-xl hover:scale-105 group"
             onClick={() => router.push('/home')}
           >
             Empezar ahora
             <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
-          
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="h-14 px-8 rounded-full border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all duration-300 font-medium text-base backdrop-blur-sm"
-          >
-            <FileText className="mr-2 h-5 w-5 opacity-60" />
-            Ver documentación
-          </Button>
+
         </div>
       </div>
 
-      {/* Bottom Scroll Indicator */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/40">
-        <span className="text-[10px] uppercase tracking-widest font-bold">Scroll para descubrir</span>
-        <div className="animate-bounce p-2 rounded-full border border-white/10 bg-white/5">
-          <MousePointer2 className="h-4 w-4 rotate-180" />
-        </div>
-      </div>
-
-      <style jsx global>{`
-        @keyframes fade-in-down {
-          0% { opacity: 0; transform: translateY(-20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-down {
-          animation: fade-in-down 0.8s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 }

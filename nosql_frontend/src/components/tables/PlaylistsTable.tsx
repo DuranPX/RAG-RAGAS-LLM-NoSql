@@ -37,7 +37,6 @@ const PlaylistsTable: React.FC<PlaylistsTableProps> = ({ playlists }) => {
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Dueño</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">N° Canciones</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Fecha creación</TableHead>
-            <TableHead className="text-right text-white/40 text-[10px] font-bold uppercase tracking-wider">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

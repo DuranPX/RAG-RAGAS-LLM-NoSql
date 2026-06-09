@@ -89,10 +89,10 @@ export default function PlaylistDetailPage() {
   if (error) {
     return (
       <AppShell>
-        <ErrorState 
-          message={error} 
-          onRetry={refetch} 
-          variant="fullpage" 
+        <ErrorState
+          message={error}
+          onRetry={refetch}
+          variant="fullpage"
         />
       </AppShell>
     );
@@ -112,7 +112,7 @@ export default function PlaylistDetailPage() {
   if (!playlist) {
     return (
       <AppShell>
-        <EmptyState 
+        <EmptyState
           icon="playlist"
           title="Playlist no encontrada"
           message="La playlist que buscas no existe o fue eliminada."
@@ -129,10 +129,14 @@ export default function PlaylistDetailPage() {
           <div className="relative z-10 flex flex-col md:flex-row items-end gap-8">
             {/* Cover Art */}
             <div className="w-full md:w-[240px] aspect-square rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 shadow-2xl flex items-center justify-center shrink-0 overflow-hidden group border border-white/10">
-              {playlist.portada?.url ? (
-                <img src={playlist.portada.url} alt={playlist.titulo} className="w-full h-full object-cover" />
+              {playlist.canciones?.[0]?.portada_url ? (
+                <img
+                  src={playlist.canciones[0].portada_url}
+                  alt={playlist.titulo}
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <Music className="h-24 w-24 text-white/20 group-hover:scale-110 transition-transform duration-500" />
+                <Music className="h-24 w-24 text-white/20" />
               )}
             </div>
 
@@ -142,59 +146,37 @@ export default function PlaylistDetailPage() {
                 <span className="text-[10px] font-bold text-purple-400 uppercase tracking-[0.2em]">Playlist</span>
                 <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none">{playlist.titulo}</h1>
               </div>
-              
+
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-white/60">
-                   <div className="h-6 w-6 rounded-full bg-purple-600 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-                      {ownerName.substring(0,2)}
-                   </div>
-                   <span className="text-sm font-bold text-white/80">{ownerName}</span>
-                   <span className="text-white/20">•</span>
-                   <span className="text-sm">Creada el {new Date(playlist.fecha_creacion).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  <div className="h-6 w-6 rounded-full bg-purple-600 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                    {ownerName.substring(0, 2)}
+                  </div>
+                  <span className="text-sm font-bold text-white/80">{ownerName}</span>
+                  <span className="text-white/20">•</span>
+                  <span className="text-sm">Creada el {new Date(playlist.fecha_creacion).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                 </div>
-                
+
                 {playlist.descripcion && (
                   <p className="text-white/40 text-sm max-w-xl line-clamp-2 italic leading-relaxed">
-                     {playlist.descripcion}
+                    {playlist.descripcion}
                   </p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-6 pt-2">
-                   <div className="flex items-center gap-2 text-white/40">
-                      <Music className="h-4 w-4" />
-                      <span className="text-xs font-medium">{playlist.canciones?.length || 0} canciones</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-white/40">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-xs font-medium">~{calcTotalDuration(playlist.canciones)}</span>
-                   </div>
-                   <div className="flex items-center gap-2 text-white/40">
-                      <Users className="h-4 w-4" />
-                      <span className="text-xs font-medium">1,240 seguidores</span>
-                   </div>
+                  <div className="flex items-center gap-2 text-white/40">
+                    <Music className="h-4 w-4" />
+                    <span className="text-xs font-medium">{playlist.canciones?.length || 0} canciones</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/40">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs font-medium">~{calcTotalDuration(playlist.canciones)}</span>
+                  </div>
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-4">
-                <Button className="rounded-full bg-purple-600 hover:bg-purple-700 text-white px-8 h-12 font-bold shadow-lg shadow-purple-600/20 group">
-                  <Play className="mr-2 h-5 w-5 fill-current group-hover:scale-110 transition-transform" />
-                  Reproducir
-                </Button>
-                <Button variant="outline" className="rounded-full border-white/20 bg-white/5 hover:bg-white/10 text-white h-12 px-6">
-                  <Heart className="mr-2 h-5 w-5" />
-                  Guardar
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full border-white/20 bg-white/5 hover:bg-white/10 text-white h-12 w-12">
-                  <Share2 className="h-5 w-5" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full border-white/20 bg-white/5 hover:bg-white/10 text-white h-12 w-12">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
               </div>
             </div>
           </div>
-          
+
           {/* Background Glow */}
           <div className="absolute top-0 right-0 w-[500px] h-full bg-purple-600/10 blur-[120px] -z-10 rounded-full" />
         </section>
@@ -203,12 +185,8 @@ export default function PlaylistDetailPage() {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white tracking-tight">Canciones</h2>
-            <div className="flex items-center gap-2">
-               <Button variant="ghost" size="sm" className="text-white/40 text-xs hover:text-white">Recientes</Button>
-               <Button variant="ghost" size="sm" className="text-white/40 text-xs hover:text-white">Popularidad</Button>
-            </div>
           </div>
-          
+
           {playlist.canciones?.length > 0 ? (
             <SongsTable songs={playlist.canciones.map(mapPlaylistSongToRow)} />
           ) : (
@@ -226,14 +204,14 @@ export default function PlaylistDetailPage() {
             <h2 className="text-xl font-bold text-white tracking-tight">También te puede gustar</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {relatedPlaylists.map((p) => (
-                <PlaylistCard 
+                <PlaylistCard
                   key={p._id}
                   id={p._id}
                   title={p.titulo}
                   description={p.descripcion || ''}
                   songCount={p.canciones?.length || 0}
                   owner={ownerName}
-                  coverUrl={p.portada?.url}
+                  coverUrl={p.canciones?.[0]?.portada_url}
                 />
               ))}
             </div>

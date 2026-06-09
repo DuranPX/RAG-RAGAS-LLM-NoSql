@@ -100,35 +100,8 @@ export default function StatsPage() {
     <AppShell>
       <div className="flex flex-col h-full gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Métricas y Estadísticas IA</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Métricas y Estadísticas IA | MelodIa</h1>
           <p className="text-white/60">Consulta tus estadísticas mediante el asistente o utiliza los modelos RAG de búsqueda multimodal (Groq cobraba asi que pasamos a huggingface).</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => sendPrompt('texto-texto', 'Dame una recomendación aleatoria')}>
-            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
-              <Type className="h-8 w-8 text-purple-400" />
-              <span className="font-semibold text-sm">Ejemplo Semántico</span>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => document.getElementById('file-upload')?.click()}>
-            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
-              <ImageIcon className="h-8 w-8 text-pink-400" />
-              <span className="font-semibold text-sm">Subir Imagen</span>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => sendPrompt('texto-imagen', 'Generar imagen')}>
-            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
-              <Sparkles className="h-8 w-8 text-yellow-400" />
-              <span className="font-semibold text-sm">Texto a Imagen (Mock)</span>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => sendPrompt('hibrido', 'Encuentra canciones similares y descríbelas.')}>
-            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
-              <Layers className="h-8 w-8 text-green-400" />
-              <span className="font-semibold text-sm">Búsqueda Híbrida</span>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="flex-1 min-h-[400px] flex flex-col bg-white/5 rounded-xl border border-white/10 overflow-hidden">
