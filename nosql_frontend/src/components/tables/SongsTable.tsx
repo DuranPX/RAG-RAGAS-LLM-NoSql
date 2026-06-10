@@ -38,8 +38,6 @@ const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
             <TableHead className="w-[50px] text-white/40 text-[10px] font-bold uppercase tracking-wider">#</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Canción</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Artista</TableHead>
-            <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider hidden md:table-cell">Álbum</TableHead>
-            <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider hidden lg:table-cell">Género</TableHead>
             <TableHead className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Duración</TableHead>
           </TableRow>
         </TableHeader>
@@ -67,14 +65,6 @@ const SongsTable: React.FC<SongsTableProps> = ({ songs }) => {
               </TableCell>
               <TableCell className="text-white/60 text-xs hidden md:table-cell">
                 {song.artist}
-              </TableCell>
-              <TableCell className="text-white/40 text-xs hidden md:table-cell italic">
-                {song.album}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-white/10 text-white/40 font-normal">
-                  {song.genre}
-                </Badge>
               </TableCell>
               <TableCell className="text-white/60 text-xs font-mono">
                 {song.duration}

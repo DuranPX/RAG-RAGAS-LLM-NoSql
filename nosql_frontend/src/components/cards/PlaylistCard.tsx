@@ -53,12 +53,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ id, title, description, son
             </div>
 
             <div className="flex items-center gap-2">
-              <Avatar className="h-5 w-5 border border-white/10">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-purple-600 text-[8px] text-white">
-                  {owner.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
               <span className="text-[10px] text-white/40 font-medium">{owner}</span>
             </div>
           </div>
@@ -70,12 +64,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ id, title, description, son
           {songCount} canciones
         </Badge>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-pink-500 transition-colors">
-            <Heart className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white transition-colors">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
         </div>
       </CardFooter>
     </Card>

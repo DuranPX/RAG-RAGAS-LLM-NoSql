@@ -144,6 +144,18 @@ router.get("/playlists/usuario/:id_usuario", handle(async (req) => {
   return Playlist.findByUsuario(req.params.id_usuario);
 }));
 
+router.get(
+  "/playlists/:id/relacionadas",
+  handle(async (req) => {
+    const limit = parseInt(req.query.limit) || 3;
+
+    return Playlist.relacionadasPorGenero(
+      req.params.id,
+      limit
+    );
+  })
+);
+
 router.get("/playlists/:id", handle(async (req) => {
   const playlist = await Playlist.findById(req.params.id);
   if (!playlist) throw { status: 404, errores: ["Playlist no encontrada"] };
@@ -215,62 +227,30 @@ router.post("/chunks/vector-search", handle(async (req) => {
 
 // SEARCH
 router.post("/search", handle(async (req) => {
+
   const { texto, anio, pais, genero } = req.body;
-  const { albums, artistas } = require("../config/db").getCollections();
 
-  // --- Filtro de artistas (igual que antes) ---
-  let artistFilter = {};
-  if (pais)   artistFilter.pais = pais;
-  if (genero) artistFilter.generos = { $regex: genero, $options: "i" };
-  if (texto)  artistFilter.nombre  = { $regex: texto,  $options: "i" };
+  let artistas = [];
+  let albums = [];
+  let canciones = [];
 
-  const artistsRes = await artistas.find(artistFilter).toArray();
-  const artistIds  = artistsRes.map(a => a._id);
-
-  // --- Filtro de albums ---
-  let albumFilter = {};
-  if (anio) albumFilter.anio_lanzamiento = Number(anio);
-  if (texto) albumFilter.titulo = { $regex: texto, $options: "i" };
-  if (artistIds.length > 0) albumFilter.id_artista = { $in: artistIds };
-
-  const albumsRes = await albums.find(albumFilter).toArray();
-  const albumIds  = albumsRes.map(a => a._id);
-
-  const artistIdsFromAlbums = albumsRes.map(a => a.id_artista);
-  const extraArtists = await artistas.find({
-    _id: { $in: artistIdsFromAlbums }
-  }).toArray();
-
-  const allArtists = [
-    ...artistsRes,
-    ...extraArtists.filter(a =>
-      !artistsRes.some(a2 => a2._id.toString() === a._id.toString())
-    )
-  ];
-
-  // Buscar canciones usando los IDs encontrados ---
-  let songFilter = {};
-  if (genero) songFilter.genero = { $regex: genero, $options: "i" };
-  if (texto)  songFilter.titulo = { $regex: texto,  $options: "i" };
-
-  // Filtrar por album (que ya trae el filtro de año y artista aplicado)
-  if (albumIds.length > 0) {
-    songFilter["album.id_album"] = { $in: albumIds };
-  } else if (anio || artistIds.length > 0) {
-    // Si había filtros pero no se encontraron albums/artistas, no devolver nada
-    return { albums: albumsRes, artistas: allArtists, canciones: [], total: 0, rag: null };
+  if (texto) {
+    [artistas, albums, canciones] = await Promise.all([
+      Artist.searchCards(texto),
+      Album.searchCards(texto),
+      SongModel.searchCards(texto)
+    ]);
   }
 
-  const canciones = await SongModel.find(songFilter, {
-    projection: { emb_letra: 0, letra: 0 } // no mandar los vectores al frontend
-  });
-
   return {
-    albums: albumsRes,
-    artistas: allArtists,
+    artistas,
+    albums,
     canciones,
-    total: canciones.length,
-    rag: null // aquí se conecta el pipeline RAG
+    total:
+      artistas.length +
+      albums.length +
+      canciones.length,
+    rag: null
   };
 }));
 

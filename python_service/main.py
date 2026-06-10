@@ -54,6 +54,35 @@ def get_image_embedding_b64(query: ImageQueryBase64):
         print("Error embed imagen:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+class TextToImageQuery(BaseModel):
+    texto: str
+
+@app.post("/api/embed/texto_a_imagen")
+def get_text_to_image_embedding(query: TextToImageQuery):
+    """
+    Genera un embedding CLIP de 512 dims a partir de texto.
+    Permite buscar imágenes/álbumes por descripción textual,
+    ya que CLIP proyecta texto e imagen al mismo espacio vectorial.
+    """
+    try:
+        model, _ = get_clip_model()
+        
+        # CLIP tokeniza texto directamente
+        import open_clip
+        tokenizer = open_clip.get_tokenizer("ViT-B-32")
+        text_tokens = tokenizer([query.texto])
+        
+        with torch.no_grad():
+            text_features = model.encode_text(text_tokens)
+        
+        text_features /= text_features.norm(dim=-1, keepdim=True)
+        vector = text_features[0].cpu().tolist()
+        
+        return {"embedding": vector, "dims": len(vector)}
+    except Exception as e:
+        print("Error embed texto→imagen:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     print("Iniciando servicio de embeddings internos en puerto 5000...")
     uvicorn.run(app, port=5000)

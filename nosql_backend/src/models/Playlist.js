@@ -12,6 +12,7 @@ class Playlist {
 
   static async findByUsuario(id_usuario) {
     const { playlists } = getCollections();
+
     return playlists
       .find({ id_usuario: new ObjectId(id_usuario) })
       .sort({ fecha_creacion: -1 })
@@ -109,6 +110,84 @@ class Playlist {
 
     return playlists.aggregate(pipeline).toArray();
   }
+
+  static async relacionadasPorGenero(id_playlist, limit = 3) {
+  const { playlists, canciones } = getCollections();
+
+  const playlist = await playlists.findOne({
+    _id: new ObjectId(id_playlist)
+  });
+
+  if (!playlist) {
+    throw {
+      status: 404,
+      errores: ["Playlist no encontrada"]
+    };
+  }
+
+  const idsCanciones =
+    playlist.canciones?.map(c => c.id_cancion) || [];
+
+  if (!idsCanciones.length) {
+    return [];
+  }
+
+  const cancionesPlaylist = await canciones.find({
+    _id: { $in: idsCanciones }
+  }).toArray();
+
+  const generos = [
+    ...new Set(
+      cancionesPlaylist
+        .map(c => c.genero)
+        .filter(Boolean)
+    )
+  ];
+
+  return playlists.aggregate([
+    {
+      $match: {
+        _id: { $ne: new ObjectId(id_playlist) }
+      }
+    },
+    {
+      $lookup: {
+        from: "canciones",
+        localField: "canciones.id_cancion",
+        foreignField: "_id",
+        as: "songs"
+      }
+    },
+    {
+      $addFields: {
+        coincidencias_genero: {
+          $size: {
+            $filter: {
+              input: "$songs",
+              as: "song",
+              cond: {
+                $in: ["$$song.genero", generos]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      $match: {
+        coincidencias_genero: { $gt: 0 }
+      }
+    },
+    {
+      $sort: {
+        coincidencias_genero: -1
+      }
+    },
+    {
+      $limit: limit
+    }
+  ]).toArray();
+}
 }
 
 module.exports = Playlist;

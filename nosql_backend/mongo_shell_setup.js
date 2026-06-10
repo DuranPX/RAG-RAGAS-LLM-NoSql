@@ -621,6 +621,6 @@ db.createCollection("evaluaciones_ragas", {
     }
   },
   validationLevel: "moderate",
-  validationAction: "warn"
+  validationAction: "error"
 });
 db.evaluaciones_ragas.createIndex({ fecha_evaluacion: -1 }, { name: "idx_evaluaciones_ragas_fecha" });

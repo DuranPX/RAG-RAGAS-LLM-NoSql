@@ -17,7 +17,7 @@ export default function PlaylistsPage() {
   const [activeTab, setActiveTab] = useState('Todas');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const tabs = ['Todas', 'Mis Favoritas', 'Recientes'];
+  const tabs = ['Todas'];
 
   // Fetch combinado: usuarios + sus playlists
   const { data, isLoading, error, refetch } = useApi(async () => {
@@ -53,7 +53,7 @@ export default function PlaylistsPage() {
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-white tracking-tight">Mis Playlists</h1>
+            <h1 className="text-4xl font-bold text-white tracking-tight">Playlists</h1>
             <p className="text-white/40 text-sm max-w-lg">
               Gestiona y analiza tus listas de reproducción personalizadas.
             </p>
@@ -79,7 +79,6 @@ export default function PlaylistsPage() {
           </div>
 
           <div className="relative w-full md:w-72 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 group-focus-within:text-purple-400 transition-colors" />
             <Input 
               placeholder="Filtrar playlists..." 
               className="bg-transparent border-none focus-visible:ring-0 text-sm"

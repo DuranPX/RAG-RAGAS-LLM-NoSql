@@ -56,9 +56,15 @@ export default function EvaluationPage() {
         setExecuting(false);
       }, 2000);
     } catch (err) {
-      console.error('Error ejecutando evaluación:', err);
-      setError(err.errores?.[0] || 'Error ejecutando evaluación');
-      setExecuting(false);
+      if (
+        err?.name === 'AbortError' ||
+        err?.code === 'ERR_CANCELED'
+      ) {
+        return;
+      }
+
+      console.error('Error cargando datos:', err);
+      setError(err.errores?.[0] || 'Error cargando datos de evaluación');
     }
   };
 

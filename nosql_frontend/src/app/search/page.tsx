@@ -46,8 +46,8 @@ export default function SearchPage() {
             <h1 className="text-2xl font-bold text-white">
               {queryParam ? `Resultados para "${queryParam}"` : 'Buscar'}
             </h1>
-            {(results?.albums?.length > 0 || results?.artistas?.length > 0) && (
-              <p className="text-sm text-white/40">{(results?.albums?.length || 0) + (results?.artistas?.length || 0)} resultados encontrados</p>
+            {(results?.albums?.length > 0 || results?.artistas?.length > 0 || results?.canciones?.length > 0) && (
+              <p className="text-sm text-white/40">{(results?.albums?.length || 0) + (results?.artistas?.length || 0) + (results?.canciones?.length || 0)} resultados encontrados</p>
             )}
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function SearchPage() {
         <section className="space-y-8">
           {isLoading ? (
             <LoadingSkeleton variant="card" rows={4} />
-          ) : (!results?.albums?.length && !results?.artistas?.length) ? (
+          ) : (!results?.albums?.length && !results?.artistas?.length && !results?.canciones?.length) ? (
             <EmptyState
               icon="music"
               title="Sin resultados"
@@ -72,7 +72,7 @@ export default function SearchPage() {
                   <h2 className="text-lg font-semibold text-white/80">Artistas</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                     {results.artistas.map((artista) => (
-                      <Link key={artista._id} href={`/artist/${artista._id}`}>
+                      <Link key={artista._id} href={''}>
                         <SongCard
                           title={artista.nombre}
                           artist={artista.pais || ''}
@@ -92,7 +92,7 @@ export default function SearchPage() {
                   <h2 className="text-lg font-semibold text-white/80">Álbumes</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                     {results.albums.map((album) => (
-                      <Link key={album._id} href={`/album/${album._id}`}>
+                      <Link key={album._id} href={``}>
                         <SongCard
                           title={album.titulo}
                           artist={''}
@@ -100,6 +100,26 @@ export default function SearchPage() {
                           duration={''}
                           plays={album.tipo}
                           coverUrl={album.portada?.url}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results?.canciones && results.canciones.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-white/80">Canciones</h2>
+                  <div className="space-y-2">
+                    {results.canciones.map((cancion) => (
+                      <Link key={cancion._id} href={``}>
+                        <SongCard
+                          title={cancion.titulo}
+                          artist={cancion.artista?.nombre || ''}
+                          genre={cancion.genero || ''}
+                          duration={formatDuration(cancion.duracion)}
+                          plays={cancion.album?.titulo || ''}
+                          coverUrl={cancion.portada_url || ''}
                         />
                       </Link>
                     ))}

@@ -32,9 +32,9 @@ const songSchema = {
       bsonType: 'object',
       required: ['_id', 'nombre', 'pais'],
       properties: {
-        _id:    { bsonType: 'objectId' },
+        _id: { bsonType: 'objectId' },
         nombre: { bsonType: 'string' },
-        pais:   { bsonType: 'string' }
+        pais: { bsonType: 'string' }
       }
     },
     id_artista: {
@@ -44,9 +44,9 @@ const songSchema = {
       bsonType: 'object',
       required: ['_id', 'titulo', 'anio'],
       properties: {
-        _id:    { bsonType: 'objectId' },
+        _id: { bsonType: 'objectId' },
         titulo: { bsonType: 'string' },
-        anio:   { bsonType: 'int', minimum: 1900 }
+        anio: { bsonType: 'int', minimum: 1900 }
       }
     },
     id_album: {
@@ -212,7 +212,45 @@ const SongModel = {
         ]
       }).project({ _id: 1, titulo: 1, genero: 1, artista: 1, album: 1 }).limit(limit).toArray();
     }
-  }
+  },
+  async searchByEmotion(emocion, limit = 5) {
+    const col = getCollection();
+
+    return await col
+      .find({
+        emociones: {
+          $elemMatch: {
+            $regex: new RegExp(emocion, 'i')
+          }
+        }
+      })
+      .limit(limit)
+      .toArray();
+  },
+  async searchCards(query, limit = 50) {
+  const col = getCollection();
+
+  const regex = new RegExp(
+    query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    "i"
+  );
+
+  return col.find({
+    $or: [
+      { titulo: regex },
+      { genero: regex },
+      { "artista.nombre": regex },
+      { "album.titulo": regex }
+    ]
+  })
+  .project({
+    emb_letra: 0,
+    letra: 0
+  })
+  .limit(limit)
+  .toArray();
+}
 };
+
 
 module.exports = { SongModel, songSchema };

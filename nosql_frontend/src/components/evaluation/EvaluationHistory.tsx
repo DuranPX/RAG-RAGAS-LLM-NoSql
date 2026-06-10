@@ -101,10 +101,6 @@ export default function EvaluationHistory({ results, onRefresh }) {
                     </div>
                   </div>
                 )}
-
-                <span className="ml-4 text-xl text-slate-400">
-                  {expandedId === result._id ? '▼' : '▶'}
-                </span>
               </div>
             </button>
 

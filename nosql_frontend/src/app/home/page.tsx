@@ -67,11 +67,11 @@ export default function HomePage() {
               <h2 className="text-2xl font-bold text-white tracking-tight">Canciones Destacadas</h2>
             </div>
             <Link href="/playlists" className="text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 group">
-              Ver todo
+              Ver Playlist
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
-          
+
           {errorSongs ? (
             <ErrorState message={errorSongs} onRetry={refetchSongs} />
           ) : loadingSongs ? (
@@ -81,7 +81,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : !songs?.length ? (
-            <EmptyState 
+            <EmptyState
               icon="music"
               title="Sin canciones"
               message="Aún no hay canciones en la base de datos. Ejecuta el seed para poblar datos."
@@ -90,7 +90,7 @@ export default function HomePage() {
             <div className="flex gap-6 overflow-x-auto pb-6 -mx-2 px-2 custom-scrollbar snap-x">
               {songs.slice(0, 6).map((song) => (
                 <div key={song._id} className="snap-start shrink-0">
-                  <SongCard 
+                  <SongCard
                     title={song.titulo}
                     artist={song.artista?.nombre || song.nombre_artista || ''}
                     genre={song.genero || ''}
@@ -107,15 +107,15 @@ export default function HomePage() {
         {/* Section 3 — Artistas Populares */}
         <section className="space-y-6">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-white tracking-tight">Artistas Sugeridos</h2>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Artistas Conocidos</h2>
           </div>
-          
+
           {errorArtists ? (
             <ErrorState message={errorArtists} onRetry={refetchArtists} />
           ) : loadingArtists ? (
             <LoadingSkeleton variant="card" rows={4} />
           ) : !artists?.length ? (
-            <EmptyState 
+            <EmptyState
               icon="users"
               title="Sin artistas"
               message="No hay artistas registrados aún."
@@ -123,12 +123,12 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {artists.map((artist) => (
-                <ArtistCard 
+                <ArtistCard
                   key={artist._id}
                   name={artist.nombre}
                   country={artist.pais || 'Desconocido'}
-                  genre={artist.generos?.[0] || 'N/A'}
-                  listeners={''}
+                  generos={artist.generos || []}
+                  listeners=""
                 />
               ))}
             </div>
@@ -141,13 +141,13 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold text-white tracking-tight">Biblioteca de Canciones</h2>
             <div className="text-xs text-white/40">Total: {songs?.length || 0} registros</div>
           </div>
-          
+
           {errorSongs ? (
             <ErrorState message={errorSongs} onRetry={refetchSongs} />
           ) : loadingSongs ? (
             <LoadingSkeleton variant="row" rows={6} />
           ) : !songs?.length ? (
-            <EmptyState 
+            <EmptyState
               icon="music"
               title="Sin canciones"
               message="Ejecuta el seed para poblar la biblioteca."

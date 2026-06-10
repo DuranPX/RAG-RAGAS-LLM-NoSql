@@ -16,16 +16,15 @@ export default function EvaluationRunner({ onRunEvaluation, executing, totalEval
             Acerca de esta evaluación
           </h3>
           <ul className="text-sm text-slate-300 space-y-2">
-            <li>✓ Ejecuta 20 preguntas de prueba sobre el sistema RAG</li>
-            <li>✓ Calcula métricas RAGAS (Faithfulness, Answer Relevancy, Context Recall)</li>
-            <li>✓ Utiliza el mismo pipeline del backend (Meta-Llama-3-8B-Instruct)</li>
-            <li>✓ Almacena resultados para comparativas futuras</li>
+            <li>Ejecuta 20 preguntas de prueba sobre el sistema RAG</li>
+            <li>Calcula métricas RAGAS (Answer Relevancy)</li>
+            <li>Utiliza el mismo pipeline del backend (Meta-Llama-3-8B-Instruct)</li>
           </ul>
         </div>
 
         <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3 mt-4">
           <p className="text-sm text-blue-200">
-            ⏱️ Tiempo estimado: 2-5 minutos según disponibilidad de recursos
+            Tiempo estimado: 2-5 minutos según disponibilidad de recursos
           </p>
         </div>
       </div>
@@ -37,12 +36,10 @@ export default function EvaluationRunner({ onRunEvaluation, executing, totalEval
       >
         {executing ? (
           <span className="flex items-center justify-center">
-            <span className="animate-spin mr-2">⚙️</span>
             Ejecutando evaluación...
           </span>
         ) : (
           <span className="flex items-center justify-center">
-            <span className="mr-2">▶️</span>
             Ejecutar Evaluación RAGAS
           </span>
         )}
@@ -60,7 +57,7 @@ export default function EvaluationRunner({ onRunEvaluation, executing, totalEval
             <strong>Embedding:</strong> all-MiniLM-L6-v2 (text) + CLIP-ViT-B-32 (imagen)
           </p>
           <p>
-            <strong>Métricas RAGAS:</strong> Faithfulness (respuesta fiel a contexto), Answer Relevancy (relevancia de respuesta), Context Recall (recuperación de contextos)
+            <strong>Métricas RAGAS:</strong> Answer Relevancy (relevancia de respuesta)
           </p>
         </div>
       )}
@@ -68,7 +65,7 @@ export default function EvaluationRunner({ onRunEvaluation, executing, totalEval
       {totalEvaluations > 0 && (
         <div className="mt-4 p-3 bg-green-900/20 border border-green-700/30 rounded-lg">
           <p className="text-sm text-green-200">
-            ✓ Hay {totalEvaluations} evaluación(es) anterior(es). Los resultados se compararan automáticamente.
+            Hay {totalEvaluations} evaluación(es) anterior(es). Los resultados se compararan automáticamente.
           </p>
         </div>
       )}

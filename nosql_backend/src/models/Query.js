@@ -57,7 +57,9 @@ class Query {
       texto,
       modelo_usado,
       fecha_generacion: new Date(),
-      chunks_usados: chunks_usados.map(cid => new ObjectId(cid))
+      chunks_usados: chunks_usados.map(cid =>
+        cid instanceof ObjectId ? cid : new ObjectId(cid)
+      )
     };
 
     const result = await consultas.findOneAndUpdate(
