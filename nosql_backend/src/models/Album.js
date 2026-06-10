@@ -101,6 +101,27 @@ class Album {
       }
     ]).toArray();
   }
+  static async searchCards(query, limit = 50) {
+    const { albums } = getCollections();
+
+    const regex = new RegExp(
+      query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      "i"
+    );
+
+    console.log("BUSCANDO ALBUM:", query);
+    console.log("REGEX:", regex);
+
+    const resultado = await albums.find({
+      titulo: regex
+    })
+      .limit(limit)
+      .toArray();
+
+    console.log("ENCONTRADOS:", resultado.length);
+
+    return resultado;
+  }
 }
 
 module.exports = Album;

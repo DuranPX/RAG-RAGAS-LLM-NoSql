@@ -71,6 +71,25 @@ class Artist {
 
     return { message: "Artist eliminado" };
   }
+  static async searchCards(query, limit = 50) {
+  const { artistas } = getCollections();
+
+  const regex = new RegExp(
+    query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    "i"
+  );
+
+  return artistas.find({
+    $or: [
+      { nombre: regex },
+      { pais: regex },
+      { generos: regex },
+      { descripcion: regex }
+    ]
+  })
+  .limit(limit)
+  .toArray();
+}
 }
 
 module.exports = Artist;

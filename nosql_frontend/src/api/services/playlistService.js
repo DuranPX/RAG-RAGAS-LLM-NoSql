@@ -7,4 +7,6 @@ export const playlistService = {
   create: (data) => post('/playlists', data),
   addSong: (playlistId, songId) => post(`/playlists/${playlistId}/canciones`, { id_cancion: songId }),
   removeSong: (playlistId, songId) => del(`/playlists/${playlistId}/canciones/${songId}`),
+  getRelatedByGenre: (playlistId, limit = 3) =>
+  get(`/playlists/${playlistId}/relacionadas`, { limit }),
 };

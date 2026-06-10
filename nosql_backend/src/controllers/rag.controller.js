@@ -1,4 +1,5 @@
 const OpenAI = require("openai");
+const { ObjectId } = require("mongodb");
 const { SongModel } = require("../models/Song");
 const { ChunkModel } = require("../models/Chunk");
 const AlbumModel = require("../models/Album");
@@ -36,7 +37,10 @@ REGLAS DE RESPUESTA:
 6. Los resultados están ordenados por relevancia estimada.
 7. Analiza todos los resultados antes de responder.
 8. No asumas que el primer resultado es necesariamente la mejor recomendación.
-9. Si varios resultados son apropiados, compáralos y explica cuál parece más adecuado para la consulta.`;
+9. Si varios resultados son apropiados, compáralos y explica cuál parece más adecuado para la consulta.
+10. NUNCA inventes canciones, artistas, álbumes o datos que no aparezcan en el contexto proporcionado.
+11. Si el contexto no contiene suficiente información para responder con precisión, dilo explícitamente en lugar de completar con conocimiento externo.
+12. Si el usuario menciona una época o año específico, solo recomienda canciones cuyo año en el contexto coincida. Si ningún resultado coincide con el período, indícalo honestamente.`;
 
 // ─── HELPERS (implementaciones completas restauradas) ────────────────────────
 
@@ -113,19 +117,20 @@ function buildSongEvidence(song, source, query) {
     source === "exact"
       ? 1.0
       : source === "metadata"
-      ? matchType === "exact"
-        ? 1.0
-        : matchType === "phrase"
-        ? 0.95
-        : 0.85
-      : source === "emotion"
-      ? 0.9
-      : source === "vector_song"
-      ? (song.score || 0) * 0.7
-      : 0;
+        ? matchType === "exact"
+          ? 1.0
+          : matchType === "phrase"
+            ? 0.95
+            : 0.85
+        : source === "emotion"
+          ? 0.9
+          : source === "vector_song"
+            ? (song.score || 0) * 0.7
+            : 0;
 
   return {
     ...song,
+    chunk_texto: song.chunk_texto || song.letra_fragmento || null,
     tipo: "cancion",
     source,
     matchType,
@@ -222,7 +227,7 @@ PREGUNTA DEL USUARIO: ${prompt}.`;
         { role: "user", content: user_content },
       ],
       model: "meta-llama/Meta-Llama-3-8B-Instruct",
-      temperature: 0.15,
+      temperature: 0.05,
       max_tokens: 600,
       top_p: 0.92,
     });
@@ -234,19 +239,15 @@ PREGUNTA DEL USUARIO: ${prompt}.`;
   }
 }
 
-// ─── FIX: albumImageVectorSearch usa getCollections() con nombre correcto ───
-// IMPORTANTE: reemplaza "albumes" por el nombre EXACTO que retorna tu getCollections()
-// Ejecuta esto en tu consola para saberlo: console.log(Object.keys(getCollections()))
+// FIX: albumImageVectorSearch usa getCollections() con nombre correcto 
+
 async function albumImageVectorSearch(embedding, top_k) {
   const collections = getCollections();
-
-  // Detecta el nombre real de la colección de álbumes
-  // Prueba en orden: albumes → albums → album → Albums
   const albumCollection =
     collections.albumes ||
-    collections.albums  ||
-    collections.album   ||
-    collections.Albums  ||
+    collections.albums ||
+    collections.album ||
+    collections.Albums ||
     null;
 
   if (!albumCollection) {
@@ -261,7 +262,7 @@ async function albumImageVectorSearch(embedding, top_k) {
     const results = await albumCollection.aggregate([
       {
         $vectorSearch: {
-          index: "vector_idx_portada_imagen", // ← ajusta si tu índice tiene otro nombre
+          index: "vector_idx_portada_imagen",
           path: "portada.emb_imagen",
           queryVector: embedding,
           numCandidates: top_k * 10,
@@ -297,12 +298,12 @@ async function albumImageVectorSearch(embedding, top_k) {
 async function ragGlobal({ texto, embeddingTexto, embeddingImagen, top_k = 5, modalidad = "texto" }) {
   try {
     let evidencias = [];
-    const queryType       = detectQueryType(texto);
+    const queryType = detectQueryType(texto);
     const emotionDetected = detectEmotion(texto);
-    const entityName      = extractEntity(texto);
-    const metadataQuery   = entityName || texto;
+    const entityName = extractEntity(texto);
+    const metadataQuery = entityName || texto;
 
-    const hasTextEmb  = Array.isArray(embeddingTexto)  && embeddingTexto.length  === 384;
+    const hasTextEmb = Array.isArray(embeddingTexto) && embeddingTexto.length === 384;
     const hasImageEmb = Array.isArray(embeddingImagen) && embeddingImagen.length === 512;
 
     console.log("[QUERY TYPE]", queryType, "| ENTITY:", entityName || "N/A");
@@ -336,9 +337,9 @@ async function ragGlobal({ texto, embeddingTexto, embeddingImagen, top_k = 5, mo
             : Promise.resolve([]),
         ]);
 
-      console.log("[METADATA]",    metadataResults.length);
-      console.log("[VEC SONG]",    vectorSongResults.length);
-      console.log("[CHUNKS]",      chunkResults.length);
+      console.log("[METADATA]", metadataResults.length);
+      console.log("[VEC SONG]", vectorSongResults.length);
+      console.log("[CHUNKS]", chunkResults.length);
       console.log("[ALBUM IMAGE]", albumImageResults.length);
 
       const metadataEvidences = metadataResults.map((r) =>
@@ -353,10 +354,18 @@ async function ragGlobal({ texto, embeddingTexto, embeddingImagen, top_k = 5, mo
         return ev;
       });
 
-      evidencias = mergeAndRerankEvidences(
-        [...metadataEvidences, ...vectorEvidences, ...chunkEvidences, ...albumImageResults],
-        top_k
-      );
+      const topChunks = chunkEvidences
+        .sort((a, b) => b.score_final - a.score_final)
+        .slice(0, 3);
+
+      // CORRECTO
+      evidencias = [
+        ...mergeAndRerankEvidences(
+          [...metadataEvidences, ...vectorEvidences, ...albumImageResults],
+          top_k
+        ),
+        ...topChunks,
+      ];
     }
 
     evidencias = evidencias.filter(isValidEvidence);
@@ -368,6 +377,10 @@ async function ragGlobal({ texto, embeddingTexto, embeddingImagen, top_k = 5, mo
 
     // Construcción de bloques de contexto
     let bloques = [];
+    // Al inicio de bloques[], antes del for loop en ragGlobal
+    if (emotionDetected) {
+      bloques.unshift(`FILTRO EMOCIONAL DETECTADO: "${emotionDetected}" — prioriza canciones con esa emoción.`);
+    }
     const collections = getCollections();
     const artistas =
       collections.artistas || collections.artists || collections.artista || null;
@@ -381,12 +394,14 @@ async function ragGlobal({ texto, embeddingTexto, embeddingImagen, top_k = 5, mo
       const tipo = ev.tipo || ev.tipo_fuente;
 
       if (tipo === "cancion") {
+        const anioAlbum = ev.album?.anio || ev.album?.anio_lanzamiento || ev.anio_lanzamiento || null;
+
         bloques.push(`CANCIÓN: ${ev.titulo || "Desconocido"}
-• Artista: ${ev.artista?.nombre || "Desconocido"}
-• Género: ${ev.genero || "No especificado"}
-• Álbum: ${ev.album?.titulo || "Single"}
-• Fragmento de Letra: ${ev.chunk_texto || "Cita referencial"}
-• Relevancia: ${(ev.score_final || 0).toFixed(4)}`);
+- Artista: ${ev.artista?.nombre || "Desconocido"}
+- Género: ${ev.genero || "No especificado"}
+- Álbum: ${ev.album?.titulo || "Single"} ${anioAlbum ? `(${anioAlbum})` : "(año desconocido)"}
+${ev.chunk_texto ? `• Fragmento: ${ev.chunk_texto}` : "• Sin fragmento de letra disponible"}
+- Relevancia: ${(ev.score_final || 0).toFixed(4)}`);
 
       } else if (tipo === "chunk") {
         bloques.push(`CHUNK: ${ev.chunk_texto || "Texto no disponible"}
@@ -486,33 +501,92 @@ async function wrapAndSaveQuery({
   const { respuesta, evidencias, modelo_usado } = ragResult;
   const embedding = embeddingTexto || embeddingImagen;
 
-  const mappedResultados = evidencias.map((ev) => ({
-    id_cancion:      ev.tipo === "cancion"      && ev._id ? ev._id : null,
-    id_album:        ev.tipo === "album_imagen" && ev._id ? ev._id : null,
-    titulo:          ev.titulo || null,
-    nombre_artista:  ev.artista?.nombre || null,
-    tipo_fuente:     ev.tipo || ev.tipo_fuente || null,
-    score_similitud: ev.score_final ?? ev.score ?? null,
-  }));
+  // 🔍 DEBUG 1: Ver qué evidencias llegan
+  console.log("[WRAP DEBUG] tipo_consulta:", tipo_consulta);
+  console.log("[WRAP DEBUG] evidencias count:", evidencias.length);
+  console.log("[WRAP DEBUG] evidencias tipos:", evidencias.map(e => ({
+    tipo: e.tipo,
+    tipo_fuente: e.tipo_fuente,
+    _id: e._id,
+    titulo: e.titulo,
+    score_final: e.score_final,
+    score: e.score,
+  })));
+
+  const mappedResultados = evidencias.map((ev) => {
+    const tipo = ev.tipo || ev.tipo_fuente || null;
+    const esAlbum = tipo === "album_imagen" || tipo === "album";
+    const esCancion = tipo === "cancion";
+
+    return {
+      id_cancion: esCancion && ev._id
+        ? (ev._id instanceof ObjectId ? ev._id : new ObjectId(ev._id))
+        : null,
+      id_album: esAlbum && ev._id
+        ? (ev._id instanceof ObjectId ? ev._id : new ObjectId(ev._id))
+        : null,
+      titulo: ev.titulo || null,
+      nombre_artista: ev.artista?.nombre || null,
+      tipo_fuente: tipo,
+      score_similitud: ev.score_final ?? ev.score ?? null,
+    };
+  });
+
+  // 🔍 DEBUG 2: Ver el documento mapeado antes de insertar
+  console.log("[WRAP DEBUG] mappedResultados:", JSON.stringify(mappedResultados, null, 2));
 
   const chunks_usados = evidencias
-    .filter((ev) => ev.tipo_fuente)
+    .filter((ev) => (ev.tipo || ev.tipo_fuente) === "chunk")
     .map((ev) => ev._id);
 
-  const queryCreated = await Query.create({
-    texto_pregunta:   texto,
-    vector_embedding: embedding,
+  console.log("[WRAP DEBUG] chunks_usados:", chunks_usados);
+
+  // 🔍 DEBUG 3: Ver el documento completo que va a insertarse
+  const docAInsertar = {
+    texto_pregunta: texto,
+    vector_embedding: embedding ? `[Array de ${embedding.length} dims]` : null,
     modelo_embedding: embeddingImagen ? "clip-ViT-B-32" : "all-MiniLM-L6-v2",
     tipo_consulta,
     tiene_imagen,
     resultados: mappedResultados,
-  });
+  };
+  console.log("[WRAP DEBUG] doc a insertar:", JSON.stringify(docAInsertar, null, 2));
 
-  await Query.guardarRespuesta(queryCreated._id, {
-    texto: respuesta,
-    modelo_usado,
-    chunks_usados,
-  });
+  let queryCreated;
+  try {
+    queryCreated = await Query.create({
+      texto_pregunta: texto,
+      vector_embedding: embedding,
+      modelo_embedding: embeddingImagen ? "clip-ViT-B-32" : "all-MiniLM-L6-v2",
+      tipo_consulta,
+      tiene_imagen,
+      resultados: mappedResultados,
+    });
+    console.log("[WRAP DEBUG] Query.create OK, _id:", queryCreated._id);
+  } catch (createErr) {
+    // 🔍 DEBUG 4: Error específico del create
+    console.error("[WRAP DEBUG] FALLO en Query.create:");
+    console.error("[WRAP DEBUG] message:", createErr.message);
+    console.error("[WRAP DEBUG] code:", createErr.code);
+    console.error("[WRAP DEBUG] errInfo:", JSON.stringify(createErr.errInfo, null, 2));
+    throw createErr;
+  }
+
+  try {
+    await Query.guardarRespuesta(queryCreated._id, {
+      texto: respuesta,
+      modelo_usado,
+      chunks_usados,
+    });
+    console.log("[WRAP DEBUG] guardarRespuesta OK");
+  } catch (respErr) {
+    // 🔍 DEBUG 5: Error específico del guardarRespuesta
+    console.error("[WRAP DEBUG] FALLO en guardarRespuesta:");
+    console.error("[WRAP DEBUG] message:", respErr.message);
+    console.error("[WRAP DEBUG] code:", respErr.code);
+    console.error("[WRAP DEBUG] errInfo:", JSON.stringify(respErr.errInfo, null, 2));
+    throw respErr;
+  }
 
   return ragResult;
 }
@@ -554,7 +628,7 @@ exports.hibrido = async (req, res) => {
   const { texto, imageBase64 } = req.body;
 
   const [embeddingTexto, embeddingImagen] = await Promise.all([
-    texto       ? obtenerEmbeddingTextoLocal(texto)        : Promise.resolve(null),
+    texto ? obtenerEmbeddingTextoLocal(texto) : Promise.resolve(null),
     imageBase64 ? obtenerEmbeddingImagenLocal(imageBase64) : Promise.resolve(null),
   ]);
 
@@ -578,4 +652,132 @@ exports.hibrido = async (req, res) => {
   });
 
   return result;
+};
+
+exports.imagenImagen = async (req, res) => {
+  const { imageBase64 } = req.body;
+  if (!imageBase64) throw new Error("Se requiere el campo 'imageBase64'");
+
+  const embeddingImagen = await obtenerEmbeddingImagenLocal(imageBase64);
+  if (!embeddingImagen) throw new Error("No se pudo generar el embedding de la imagen");
+
+  let evAlbums = [];
+  try {
+    evAlbums = await albumImageVectorSearch(embeddingImagen, 5);
+  } catch (searchErr) {
+    console.error("[ERROR vectorSearch imagen-imagen]", searchErr.message);
+  }
+
+  const collections = getCollections();
+  const artistas = collections.artistas || collections.artists || collections.artista || null;
+
+  const resultados = await Promise.all(evAlbums.map(async (album) => {
+    let nombreArtista = "Desconocido";
+    if (album.id_artista && artistas) {
+      const artData = await artistas.findOne({ _id: album.id_artista });
+      if (artData) nombreArtista = artData.nombre;
+    }
+    return {
+      id_album: album._id,
+      titulo: album.titulo || "Desconocido",
+      artista: nombreArtista,
+      portada_url: album.portada?.url || null,
+      score_similitud: album.score_final ?? album.score ?? 0,
+    };
+  }));
+
+  const contexto = resultados.length > 0
+    ? resultados.map((r, i) =>
+      `${i + 1}. ÁLBUM: ${r.titulo} — Artista: ${r.artista} (score: ${r.score_similitud.toFixed(4)})`
+    ).join("\n")
+    : "No se encontraron álbumes visualmente similares en la base de datos.";
+
+  const respuesta = await generarLLM(
+    "El usuario envió una imagen de portada. Describe qué álbumes son visualmente similares y por qué.",
+    contexto,
+    "imagen"  // ← modalidad explícita
+  );
+
+  try {
+    await wrapAndSaveQuery({
+      texto: "Búsqueda imagen-imagen",
+      embeddingTexto: null,
+      embeddingImagen,
+      tipo_consulta: "imagen-imagen",
+      tiene_imagen: true,
+      ragResult: { respuesta, evidencias: evAlbums, modelo_usado: "meta-llama/Meta-Llama-3-8B-Instruct" },
+    });
+  } catch (saveErr) {
+    console.error("[WARN] No se pudo guardar consulta imagen-imagen:", saveErr.message);
+  }
+
+  return { respuesta, resultados, modelo_usado: "meta-llama/Meta-Llama-3-8B-Instruct" };
+};
+
+exports.textoImagen = async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) throw new Error("Se requiere el campo 'prompt'");
+
+  let embeddingCLIP = null;
+  try {
+    const response = await fetch("http://127.0.0.1:5000/api/embed/texto_a_imagen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: prompt }),
+    });
+    const data = await response.json();
+    embeddingCLIP = data.embedding;
+  } catch (fetchErr) {
+    console.error("[ERROR microservicio texto_a_imagen]", fetchErr.message);
+  }
+
+  if (!embeddingCLIP) throw new Error("No se pudo obtener embedding CLIP del texto");
+
+  let evAlbums = [];
+  try {
+    evAlbums = await albumImageVectorSearch(embeddingCLIP, 5);
+  } catch (searchErr) {
+    console.error("[ERROR vectorSearch texto-imagen]", searchErr.message);
+  }
+
+  const collections = getCollections();
+  const artistas = collections.artistas || collections.artists || collections.artista || null;
+
+  const resultados = await Promise.all(evAlbums.map(async (album) => {
+    let nombreArtista = "Desconocido";
+    if (album.id_artista && artistas) {
+      const artData = await artistas.findOne({ _id: album.id_artista });
+      if (artData) nombreArtista = artData.nombre;
+    }
+    return {
+      id_album: album._id,
+      titulo: album.titulo || "Desconocido",
+      artista: nombreArtista,
+      portada_url: album.portada?.url || null,
+      score_similitud: album.score_final ?? album.score ?? 0,
+    };
+  }));
+
+  const contexto = resultados.length > 0
+    ? resultados.map((r, i) =>
+      `${i + 1}. ÁLBUM: ${r.titulo} — Artista: ${r.artista} (score: ${r.score_similitud.toFixed(4)})`
+    ).join("\n")
+    : "No se encontraron álbumes con portadas similares a esa descripción.";
+
+  const respuesta = await generarLLM(prompt, contexto, "texto");
+
+  try {
+    await wrapAndSaveQuery({
+      texto: prompt,
+      embeddingTexto: null,
+      embeddingImagen: embeddingCLIP,
+      tipo_consulta: "texto-imagen",
+      tiene_imagen: false,
+      ragResult: { respuesta, evidencias: evAlbums, modelo_usado: "meta-llama/Meta-Llama-3-8B-Instruct" },
+    });
+  } catch (saveErr) {
+    console.error("[WARN] No se pudo guardar consulta texto-imagen:", saveErr.message);
+  }
+
+  return { respuesta, resultados, modelo_usado: "meta-llama/Meta-Llama-3-8B-Instruct" };
 };

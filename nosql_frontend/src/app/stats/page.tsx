@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function StatsPage() {
 // ...
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<{ role: string; text: string; resultados?: { id_album: string; titulo: string; artista: string; portada_url: string | null; score_similitud: number }[] }[]>([
     { role: 'assistant', text: '¡Hola! Soy tu asistente IA MelodIA. Puedes preguntarme sobre tus canciones, realizar búsquedas multimodales o revisar tus métricas analíticas.' }
   ]);
   const [inputVal, setInputVal] = useState('');
@@ -59,6 +59,14 @@ export default function StatsPage() {
       let endpoint = 'http://localhost:8080/api/rag/texto-texto';
       if (type === 'imagen-texto') endpoint = 'http://localhost:8080/api/rag/imagen-texto';
       if (type === 'hibrido') endpoint = 'http://localhost:8080/api/rag/hibrido';
+      if (type === 'texto-imagen') {
+        endpoint = 'http://localhost:8080/api/rag/texto-imagen';
+        body.prompt = text;
+        delete body.texto;
+      }
+      if (type === 'imagen-imagen') {
+        endpoint = 'http://localhost:8080/api/rag/imagen-imagen';
+      }
 
       // Fallback a hibrido o imagen-texto si se adjunta imagen mediante boton send normal
       if (selectedFile && type === 'texto-texto') {
@@ -81,7 +89,11 @@ export default function StatsPage() {
       setMessages(prev => {
         const newMsgs = [...prev];
         newMsgs.pop(); // Remove 'Analizando...'
-        newMsgs.push({ role: 'assistant', text: data.respuesta || data.mensaje || 'Respuesta vacía.' });
+        newMsgs.push({
+          role: 'assistant',
+          text: data.respuesta || data.mensaje || (data.errores ? `Error: ${Array.isArray(data.errores) ? data.errores.join(', ') : data.errores}` : 'Respuesta vacía.'),
+          resultados: (type === 'imagen-imagen' || type === 'texto-imagen') ? data.resultados : undefined
+        });
         return newMsgs;
       });
 
@@ -100,8 +112,36 @@ export default function StatsPage() {
     <AppShell>
       <div className="flex flex-col h-full gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Métricas y Estadísticas IA | MelodIa</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Métricas y Estadísticas IA</h1>
           <p className="text-white/60">Consulta tus estadísticas mediante el asistente o utiliza los modelos RAG de búsqueda multimodal (Groq cobraba asi que pasamos a huggingface).</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => sendPrompt('texto-texto', 'Dame una recomendación aleatoria')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
+              <Type className="h-8 w-8 text-purple-400" />
+              <span className="font-semibold text-sm">Ejemplo Semántico</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => document.getElementById('file-upload')?.click()}>
+            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
+              <ImageIcon className="h-8 w-8 text-pink-400" />
+              <span className="font-semibold text-sm">Subir Imagen</span>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors" onClick={() => sendPrompt('texto-imagen', inputVal || 'álbum con portada oscura y minimalista')}>
+            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
+              <Sparkles className="h-8 w-8 text-yellow-400" />
+              <span className="font-semibold text-sm">Texto Imagen</span>
+              <span className="text-xs text-white/60">{`(escribe tu consulta primero o se enviara una predeterminada)`}</span>
+            </CardContent>
+          </Card>
+          <Card className={`bg-white/5 border-white/10 text-white hover:bg-white/10 cursor-pointer transition-colors ${!selectedFile ? 'opacity-50' : ''}`} onClick={() => selectedFile ? sendPrompt('imagen-imagen', 'Encuentra álbumes visualmente similares') : document.getElementById('file-upload')?.click()}>
+            <CardContent className="p-4 flex flex-col items-center justify-center gap-2">
+              <ImageIcon className="h-8 w-8 text-pink-400" />
+              <span className="font-semibold text-sm">Imagen Imagen {!selectedFile ? '(adjunta imagen)' : ''}</span>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex-1 min-h-[400px] flex flex-col bg-white/5 rounded-xl border border-white/10 overflow-hidden">
@@ -110,11 +150,31 @@ export default function StatsPage() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`px-4 py-4 rounded-2xl max-w-[85%] text-sm whitespace-pre-wrap leading-relaxed ${
-                    msg.role === 'user' 
-                      ? 'bg-purple-600 text-white rounded-br-sm' 
+                    msg.role === 'user'
+                      ? 'bg-purple-600 text-white rounded-br-sm'
                       : 'bg-white/5 border border-white/10 text-white/90 rounded-bl-sm shadow-md'
                   }`}>
                     {msg.text}
+                    {msg.resultados && msg.resultados.length > 0 && (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {msg.resultados.slice(0, 3).map((r, j) => (
+                          <div key={j} className="flex flex-col items-center gap-1">
+                            {r.portada_url ? (
+                              <img
+                                src={r.portada_url}
+                                alt={r.titulo}
+                                className="w-full aspect-square object-cover rounded-lg border border-white/10"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-full aspect-square rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-white/30 text-xs">Sin portada</div>
+                            )}
+                            <span className="text-[10px] text-white/60 text-center leading-tight line-clamp-1 w-full">{r.titulo}</span>
+                            <span className="text-[10px] text-white/40 text-center leading-tight line-clamp-1 w-full">{r.artista}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

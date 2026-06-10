@@ -226,7 +226,30 @@ const SongModel = {
       })
       .limit(limit)
       .toArray();
-  }
+  },
+  async searchCards(query, limit = 50) {
+  const col = getCollection();
+
+  const regex = new RegExp(
+    query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    "i"
+  );
+
+  return col.find({
+    $or: [
+      { titulo: regex },
+      { genero: regex },
+      { "artista.nombre": regex },
+      { "album.titulo": regex }
+    ]
+  })
+  .project({
+    emb_letra: 0,
+    letra: 0
+  })
+  .limit(limit)
+  .toArray();
+}
 };
 
 

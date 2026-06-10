@@ -9,9 +9,9 @@ async function ejecutarEvaluacion() {
   try {
     console.log('Iniciando evaluación RAGAS...');
 
-    const pythonScriptPath = path.join(
+    const pythonScriptPath = path.resolve(
       __dirname,
-      '../../python_service/scripts/evaluate_rag.py'
+      '../../../python_service/scripts/evaluate_rag.py'
     );
 
     return new Promise((resolve, reject) => {

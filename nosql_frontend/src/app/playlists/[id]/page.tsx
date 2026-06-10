@@ -58,10 +58,12 @@ export default function PlaylistDetailPage() {
 
       // Playlists relacionadas
       try {
-        const userPlaylists = await playlistService.getByUser(playlist.id_usuario);
-        const related = userPlaylists
-          .filter(p => p._id !== playlist._id)
-          .slice(0, 3);
+        const related =
+          await playlistService.getRelatedByGenre(
+            playlist._id,
+            3
+          );
+
         setRelatedPlaylists(related);
       } catch {
         setRelatedPlaylists([]);

@@ -20,11 +20,11 @@ router.post("/texto-texto", handle(ragController.textoTexto));
 router.post("/imagen-texto", handle(ragController.imagenTexto));
 
 // Text-to-Image
-router.post("/texto-imagen", handle(async (req) => {
-  const { prompt } = req.body;
-  // TODO: Generación de imagen no soportada todavía sin API
-  return { mensaje: "Búsqueda Texto-Imagen (Mock)", prompt, url: "placeholder" };
-}));
+// Text-to-Image
+router.post("/texto-imagen", handle(ragController.textoImagen));
+
+// Image-to-Image: imagen de portada álbumes visualmente similares
+router.post("/imagen-imagen", handle(ragController.imagenImagen));
 
 // Hybrid Search
 router.post("/hibrido", handle(ragController.hibrido));
